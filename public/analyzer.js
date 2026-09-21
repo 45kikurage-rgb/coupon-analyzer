@@ -65,11 +65,13 @@
 
   function render(results) {
     lastResults = results;
-    const unresolved = results.filter(item => item.status === "error" || item.size === "unknown" || item.size === "mixed" || item.product === "商品名不明").length;
+    const failed = results.filter(item => item.status === "error").length;
+    const review = results.filter(item => item.status !== "error" && (item.status === "needs_review" || item.size === "unknown" || item.size === "mixed" || item.product === "商品名不明")).length;
+    const success = results.length - review - failed;
     document.querySelector("#totalCount").textContent = results.length;
-    document.querySelector("#unresolvedCount").textContent = unresolved;
-    document.querySelector("#count350").textContent = results.filter(item => item.size === "350").length;
-    document.querySelector("#count500").textContent = results.filter(item => item.size === "500").length;
+    document.querySelector("#successCount").textContent = success;
+    document.querySelector("#reviewCount").textContent = review;
+    document.querySelector("#failureCount").textContent = failed;
     document.querySelector("#resultTotal").textContent = results.length;
     const groups = new Map();
     for (const item of results) {
@@ -178,7 +180,7 @@
     errorBox.classList.add("hidden");
     showResults.disabled = true;
     showResults.classList.remove("ready");
-    for (const id of ["totalCount", "unresolvedCount", "count350", "count500"]) document.querySelector(`#${id}`).textContent = "—";
+    for (const id of ["totalCount", "successCount", "reviewCount", "failureCount"]) document.querySelector(`#${id}`).textContent = "—";
     document.querySelector("#clear").click();
     updateDetection();
   }
@@ -198,4 +200,3 @@
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20260921-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
-
