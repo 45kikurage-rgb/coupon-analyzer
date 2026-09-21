@@ -1,13 +1,13 @@
-const CACHE_VERSION = "coupon-analyzer-20260921-v1";
+const CACHE_VERSION = "coupon-analyzer-20260922-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260921-v1",
-  "/analyzer.js?v=20260921-v1",
-  "/capture.js?v=20260921-v1",
-  "/manifest.webmanifest?v=20260921-v1",
-  "/header-character.svg?v=20260921-v1",
-  "/icon.svg?v=20260921-v1"
+  "/styles.css?v=20260922-v2",
+  "/analyzer.js?v=20260922-v2",
+  "/capture.js?v=20260922-v2",
+  "/manifest.webmanifest?v=20260922-v2",
+  "/header-character.svg?v=20260922-v2",
+  "/icon.svg?v=20260922-v2"
 ];
 
 self.addEventListener("install", (event) => {
