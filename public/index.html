@@ -7,23 +7,23 @@
   <meta name="description" content="クーポンの商品名・容量・Giftee Box残高・ギフト有効期限を判定します">
   <title>クーポン判定</title>
   <meta name="application-name" content="クーポン判定">
-  <link rel="manifest" href="/manifest.webmanifest?v=20260921-v1">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=20260921-v1">
-  <link rel="stylesheet" href="/styles.css?v=20260921-v1">
+  <link rel="manifest" href="/manifest.webmanifest?v=20260922-v2">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=20260922-v2">
+  <link rel="stylesheet" href="/styles.css?v=20260922-v2">
 </head>
 <body>
 <main class="app-shell">
   <div class="top-accent" aria-hidden="true"></div>
   <header class="site-header">
-    <div class="brand-mark" aria-hidden="true"><img src="/header-character.svg?v=20260921-v1" alt=""></div>
+    <div class="brand-mark" aria-hidden="true"><img src="/header-character.svg?v=20260922-v2" alt=""></div>
     <div><p class="eyebrow">COUPON CHECK TOOL</p><h1>クーポン判定</h1></div>
   </header>
 
   <section class="summary-cards" aria-label="集計結果">
     <article class="summary-card"><span>解析件数</span><strong id="totalCount">—</strong><small>件</small></article>
-    <article class="summary-card"><span>要確認</span><strong id="unresolvedCount">—</strong><small>件</small></article>
-    <article class="summary-card"><span>350ml缶</span><strong id="count350">—</strong><small>本</small></article>
-    <article class="summary-card"><span>500ml缶</span><strong id="count500">—</strong><small>本</small></article>
+    <article class="summary-card"><span>判定成功</span><strong id="successCount">—</strong><small>件</small></article>
+    <article class="summary-card"><span>要確認</span><strong id="reviewCount">—</strong><small>件</small></article>
+    <article class="summary-card"><span>判定不能</span><strong id="failureCount">—</strong><small>件</small></article>
   </section>
 
   <section class="workspace-card">
@@ -46,8 +46,8 @@
       <button class="capture-button fast-capture-button" id="fastStart" type="button">高速撮影<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 19a9 9 0 1 1 14.2 0M12 13l4-4"/><path d="M12 13h.01"/></svg></button>
       <button class="capture-button stable-capture-button" id="stableStart" type="button">安定撮影<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></button>
       <button class="primary-button" id="analyzeStart" type="button">安定解析<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+      <button class="fast-analysis-button" id="analyzeFastStart" type="button">高速解析</button>
     </div>
-    <button class="fast-analysis-button" id="analyzeFastStart" type="button">高速解析</button>
     <div class="familyNotice hidden" id="familyNotice">ファミマは確認画面を自動処理します。バーコードは1回のみ利用可能です。</div>
 
     <div class="capture-area hidden" id="result">
@@ -88,7 +88,7 @@
   </section>
   <footer>セブン・イレブン、ファミリーマート、Giftee Box、ミスドeギフトの商品情報を読み取って判定します。</footer>
 </main>
-<script src="/capture.js?v=20260921-v1"></script>
-<script src="/analyzer.js?v=20260921-v1"></script>
+<script src="/capture.js?v=20260922-v2"></script>
+<script src="/analyzer.js?v=20260922-v2"></script>
 </body>
 </html>
