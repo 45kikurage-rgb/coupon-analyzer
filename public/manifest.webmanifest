@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "クーポン判定",
+  "short_name": "クーポン判定",
+  "description": "クーポンの商品名・容量・Giftee Box残高・ギフト有効期限を判定します",
+  "lang": "ja",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon.svg?v=20260921-v1",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

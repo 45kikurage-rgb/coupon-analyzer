@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "coupon-analyzer",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "services": [
+    {
+      "binding": "COUPON_ANALYZER",
+      "service": "coupon-analyzer-api"
+    }
+  ],
+  "observability": { "enabled": true }
+}

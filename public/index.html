@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="クーポンの商品名・容量・Giftee Box残高・ギフト有効期限を判定します">
+  <title>クーポン判定</title>
+  <meta name="application-name" content="クーポン判定">
+  <link rel="manifest" href="/manifest.webmanifest?v=20260921-v1">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=20260921-v1">
+  <link rel="stylesheet" href="/styles.css?v=20260921-v1">
+</head>
+<body>
+<main class="app-shell">
+  <div class="top-accent" aria-hidden="true"></div>
+  <header class="site-header">
+    <div class="brand-mark" aria-hidden="true"><img src="/header-character.svg?v=20260921-v1" alt=""></div>
+    <div><p class="eyebrow">COUPON CHECK TOOL</p><h1>クーポン判定</h1></div>
+  </header>
+
+  <section class="summary-cards" aria-label="集計結果">
+    <article class="summary-card"><span>解析件数</span><strong id="totalCount">—</strong><small>件</small></article>
+    <article class="summary-card"><span>要確認</span><strong id="unresolvedCount">—</strong><small>件</small></article>
+    <article class="summary-card"><span>350ml缶</span><strong id="count350">—</strong><small>本</small></article>
+    <article class="summary-card"><span>500ml缶</span><strong id="count500">—</strong><small>本</small></article>
+  </section>
+
+  <section class="workspace-card">
+    <div class="section-heading">
+      <div><h2>URLをまとめて貼り付け</h2><p>番号や商品名が混ざったまま貼り付けられます。重複URLは1件として数えます。</p></div>
+      <div class="detection-summary"><span class="detected-count" id="counter">0件検出</span><span class="estimate-label">解析は最大100件</span></div>
+    </div>
+    <textarea id="input" spellcheck="false" aria-label="クーポンURL一覧" placeholder="セブン・ファミマ・Giftee Box・ミスドeギフトのURLを貼り付け"></textarea>
+    <div class="button-row">
+      <button class="secondary-button" id="pasteButton" type="button">
+        <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4V2H9v2"/><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4h6v4H9zM9 14h6m-3-3v6"/></svg>
+        貼り付け
+      </button>
+      <button class="secondary-button" id="analysisClear" type="button">
+        <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-1 16H6L5 6m4 4v8m6-8v8"/></svg>
+        クリア
+      </button>
+    </div>
+    <div class="main-action-row">
+      <button class="capture-button fast-capture-button" id="fastStart" type="button">高速撮影<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 19a9 9 0 1 1 14.2 0M12 13l4-4"/><path d="M12 13h.01"/></svg></button>
+      <button class="capture-button stable-capture-button" id="stableStart" type="button">安定撮影<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></button>
+      <button class="primary-button" id="analyzeStart" type="button">安定解析<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+    </div>
+    <button class="fast-analysis-button" id="analyzeFastStart" type="button">高速解析</button>
+    <div class="familyNotice hidden" id="familyNotice">ファミマは確認画面を自動処理します。バーコードは1回のみ利用可能です。</div>
+
+    <div class="capture-area hidden" id="result">
+      <div class="progress-label"><span>クーポンスクショ</span><strong id="status">待機中</strong></div>
+      <div class="progress-track"><i id="progress"></i></div>
+      <div class="summary hidden" id="summary"></div>
+      <div class="actions">
+        <button type="button" id="zipAll">全画像ZIP</button>
+        <button type="button" id="zipUnique">重複除外ZIP</button>
+        <button type="button" class="hidden" id="retryFailed">失敗分を安定処理</button>
+        <button type="button" id="clear">撮影結果を消去</button>
+        <div id="zipStatus" role="status" aria-live="polite"></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="progress-area" aria-live="polite">
+      <div class="progress-label"><span>解析の進み具合</span><strong id="analysisPercent">0%</strong></div>
+      <progress class="loading-progress" id="analysisProgress" max="100" value="0"></progress>
+      <div class="completion-row">
+        <span class="complete-message" id="analysisStatus">解析待ち</span>
+        <button class="result-button" id="showResults" type="button" disabled>
+          結果を見る
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg>
+        </button>
+      </div>
+      <p class="error-message hidden" id="analysisError" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="results-section hidden" id="analysisResults" tabindex="-1">
+    <div class="results-title-row"><div><p class="result-kicker">解析結果</p><h2>URL合計 <strong id="resultTotal">0</strong>件</h2></div></div>
+    <div class="breakdown-table" id="breakdownTable"></div>
+    <div class="item-results">
+      <div class="item-results-heading"><h3>URLごとの結果</h3></div>
+      <div class="result-list" id="resultList"></div>
+    </div>
+  </section>
+  <footer>セブン・イレブン、ファミリーマート、Giftee Box、ミスドeギフトの商品情報を読み取って判定します。</footer>
+</main>
+<script src="/capture.js?v=20260921-v1"></script>
+<script src="/analyzer.js?v=20260921-v1"></script>
+</body>
+</html>
