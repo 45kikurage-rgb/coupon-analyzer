@@ -16,3 +16,8 @@ test("worker uses an internal service binding", () => {
   assert.match(worker, /env\.COUPON_ANALYZER\.fetch/);
   assert.match(config, /"service": "coupon-analyzer-api"/);
 });
+
+test("Giftee Box accepts home and exchanged-gifts URLs", () => {
+  const analyzer = fs.readFileSync(new URL("../public/analyzer.js", import.meta.url), "utf8");
+  assert.match(analyzer, /\(\?:home\|gifts\)/);
+});
