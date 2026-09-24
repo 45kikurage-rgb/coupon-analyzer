@@ -29,7 +29,7 @@
         const url = new URL(value);
         if ((url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do") ||
           (url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb") ||
-          (url.hostname === "g4b.giftee.biz" && /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/home)?\/?$/i.test(url.pathname)) ||
+          (url.hostname === "g4b.giftee.biz" && /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname)) ||
           (url.hostname === "misterdonut.e-gift.co" && /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname))) found.add(value);
       } catch {}
       if (found.size >= 100) break;
