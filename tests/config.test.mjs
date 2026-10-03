@@ -21,3 +21,12 @@ test("Giftee Box accepts home and exchanged-gifts URLs", () => {
   const analyzer = fs.readFileSync(new URL("../public/analyzer.js", import.meta.url), "utf8");
   assert.match(analyzer, /\(\?:home\|gifts\)/);
 });
+
+test("analysis UI accepts SB Gift and caps input at 500 URLs", () => {
+  const analyzer = fs.readFileSync(new URL("../public/analyzer.js", import.meta.url), "utf8");
+  const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+  assert.match(analyzer, /hostname === "sbg\.jp"/);
+  assert.match(analyzer, /MAX_ANALYZE_URLS = 500/);
+  assert.match(analyzer, /ANALYZE_BATCH_SIZE = 100/);
+  assert.match(html, /解析は最大500件/);
+});
