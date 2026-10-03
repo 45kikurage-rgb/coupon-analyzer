@@ -18,23 +18,53 @@
   let running = false;
   let lastResults = [];
   let lastProcessingMs = 0;
+  const MAX_ANALYZE_URLS = 500;
+  const ANALYZE_BATCH_SIZE = 100;
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[char]);
 
-  function supportedUrls() {
-    const found = new Set();
-    for (const raw of input.value.replaceAll("\\_", "_").match(/https:\/\/[^\s<>"']+/gi) || []) {
-      const value = raw.replace(/[.,;、。\])}]+$/, "");
-      try {
-        const url = new URL(value);
-        if ((url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do") ||
-          (url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb") ||
-          (url.hostname === "g4b.giftee.biz" && /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname)) ||
-          (url.hostname === "misterdonut.e-gift.co" && /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname))) found.add(value);
-      } catch {}
-      if (found.size >= 100) break;
+  function isSupportedAnalysisUrl(value) {
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) return false;
+      if (url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do") return true;
+      if (url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb") return true;
+      if (url.hostname === "g4b.giftee.biz") return /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname) && !url.search;
+      if (url.hostname === "misterdonut.e-gift.co") return /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname);
+      if (url.hostname === "gift.starbucks.co.jp") return /^\/e\/[A-Za-z0-9_-]{8,200}\/?$/.test(url.pathname);
+      if (url.hostname === "sbg.jp") return /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
+      return false;
+    } catch {
+      return false;
     }
-    return [...found];
+  }
+
+  function supportedItems() {
+    const found = new Map();
+    let pendingLabel = "";
+    const add = (label, raw) => {
+      const value = String(raw || "").replaceAll("\\_", "_").replace(/[.,;、。\])}]+$/, "");
+      if (!isSupportedAnalysisUrl(value) || found.has(value) || found.size >= MAX_ANALYZE_URLS) return;
+      found.set(value, {
+        label: /^\d{1,5}$/.test(String(label || "")) ? String(label) : String(found.size + 1),
+        url: value
+      });
+    };
+    for (const line of input.value.replaceAll("\\_", "_").split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (/^\d{1,5}$/.test(trimmed)) pendingLabel = trimmed;
+      for (const raw of trimmed.match(/https:\/\/[^\s<>"']+/gi) || []) {
+        add(pendingLabel, raw);
+        pendingLabel = "";
+        if (found.size >= MAX_ANALYZE_URLS) break;
+      }
+      if (found.size >= MAX_ANALYZE_URLS) break;
+    }
+    return [...found.values()];
+  }
+
+  function supportedUrls() {
+    return supportedItems().map(item => item.url);
   }
 
   function updateDetection() {
@@ -60,6 +90,8 @@
     if (item.site === "giftee_box") return "Giftee Box";
     if (item.site === "familymart") return "ファミリーマート";
     if (item.site === "misterdonut") return "ミスタードーナツ";
+    if (item.site === "sbg") return "SBギフト";
+    if (item.site === "starbucks") return "スターバックス";
     return "セブンイレブン";
   }
 
@@ -127,13 +159,14 @@
         body:JSON.stringify({ correctionKey:item.correctionKey, product, capacity, size:sizeFromCapacity(capacity) })
       });
       Object.assign(item, saved, { status:"ok" });
-      status.textContent = "手動修正を保存しました。3サイトで次回から優先します。";
+      status.textContent = "手動修正を保存しました。次回から優先します。";
       render(lastResults);
     } catch (error) { alert(error.message); }
   }
 
   async function analyze(mode) {
-    if (running || !supportedUrls().length) return;
+    const items = supportedItems();
+    if (running || !items.length) return;
     running = true;
     updateDetection();
     errorBox.classList.add("hidden");
@@ -143,11 +176,25 @@
     status.textContent = mode === "fast" ? "高速解析中…" : "安定解析中…";
     status.classList.remove("ready");
     try {
-      const payload = await requestJson("/api/analyze", {
-        method:"POST", headers:{ "content-type":"application/json" }, body:JSON.stringify({ text:input.value, mode })
-      });
-      lastProcessingMs = Number(payload.processingMs || 0);
-      render(payload.results || []);
+      const results = [];
+      let processingMs = 0;
+      for (let offset = 0; offset < items.length; offset += ANALYZE_BATCH_SIZE) {
+        const chunk = items.slice(offset, offset + ANALYZE_BATCH_SIZE);
+        const payload = await requestJson("/api/analyze", {
+          method:"POST",
+          headers:{ "content-type":"application/json" },
+          body:JSON.stringify({ items:chunk, mode })
+        });
+        results.push(...(payload.results || []));
+        processingMs += Number(payload.processingMs || 0);
+        const completed = Math.min(items.length, offset + chunk.length);
+        const value = Math.min(95, 15 + Math.round(80 * completed / items.length));
+        progress.value = value;
+        percent.textContent = `${value}%`;
+        status.textContent = `${mode === "fast" ? "高速" : "安定"}解析中… ${completed}/${items.length}件`;
+      }
+      lastProcessingMs = processingMs;
+      render(results);
       progress.value = 100;
       percent.textContent = "100%";
       status.textContent = "解析完了";
@@ -197,6 +244,6 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20260921-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261003-v2", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
