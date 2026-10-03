@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <meta name="description" content="クーポンの商品名・容量・Giftee Box残高・ギフト有効期限を判定します">
+  <meta name="description" content="クーポンの商品名・容量・Giftee Box残高・ギフト有効期限・SBギフトを判定します">
   <title>クーポン判定</title>
   <meta name="application-name" content="クーポン判定">
   <link rel="manifest" href="/manifest.webmanifest?v=20260922-v3">
@@ -29,9 +29,9 @@
   <section class="workspace-card">
     <div class="section-heading">
       <div><h2>URLをまとめて貼り付け</h2><p>番号や商品名が混ざったまま貼り付けられます。重複URLは1件として数えます。</p></div>
-      <div class="detection-summary"><span class="detected-count" id="counter">0件検出</span><span class="estimate-label">解析は最大100件</span></div>
+      <div class="detection-summary"><span class="detected-count" id="counter">0件検出</span><span class="estimate-label">解析は最大500件</span></div>
     </div>
-    <textarea id="input" spellcheck="false" aria-label="クーポンURL一覧" placeholder="セブン・ファミマ・Giftee Box・ミスドeギフトのURLを貼り付け"></textarea>
+    <textarea id="input" spellcheck="false" aria-label="クーポンURL一覧" placeholder="セブン・ファミマ・Giftee Box・ミスド・スタバ・SBギフトのURLを貼り付け"></textarea>
     <div class="button-row">
       <button class="secondary-button" id="pasteButton" type="button">
         <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4V2H9v2"/><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4h6v4H9zM9 14h6m-3-3v6"/></svg>
@@ -86,9 +86,9 @@
       <div class="result-list" id="resultList"></div>
     </div>
   </section>
-  <footer>セブン・イレブン、ファミリーマート、Giftee Box、ミスドeギフトの商品情報を読み取って判定します。</footer>
+  <footer>セブン・イレブン、ファミリーマート、Giftee Box、ミスドeギフト、スターバックス、SBギフトの商品情報を読み取って判定します。</footer>
 </main>
 <script src="/capture.js?v=20260922-v3"></script>
-<script src="/analyzer.js?v=20260924-v1"></script>
+<script src="/analyzer.js?v=20261003-v2"></script>
 </body>
 </html>
