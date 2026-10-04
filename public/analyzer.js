@@ -78,10 +78,21 @@
   }
 
   function displayValue(item) {
-    if (item.kind === "box") return { name:item.boxName || item.product, capacity:`残高 ${item.balance ?? 0}${item.balanceUnit || "ポイント"}`, expiry:item.expiresOn || "—" };
+    if (item.kind === "box") return { name:item.groupName || item.boxName || item.product, capacity:`残高 ${item.balance ?? 0}${item.balanceUnit || "ポイント"}`, expiry:item.expiresOn || "—" };
     if (item.kind === "gift") return { name:`${item.brand || "ブランド不明"} ${item.product}`, capacity:item.capacity || "ギフト", expiry:item.expiresAt || item.expiresOn || "不明" };
     const capacity = item.size === "used" ? "利用済み" : item.capacity || (item.size === "unknown" ? "判定不能" : item.size === "other" ? "その他" : "容量表記なし");
     return { name:item.product, capacity, expiry:item.expiresOn || "—" };
+  }
+
+  function groupDisplayValue(item) {
+    if (item.kind === "box") {
+      const name = item.groupName || item.boxName || item.product;
+      const capacity = item.boxCategory === "eraberu_pay"
+        ? "金額を問わず1グループ"
+        : item.groupSpecification || `${item.balance ?? 0}${item.balanceUnit || "ポイント"}`;
+      return { name, capacity, expiry:item.expiresOn || "—" };
+    }
+    return displayValue(item);
   }
 
   function resultDetail(item) {
@@ -107,8 +118,8 @@
     document.querySelector("#resultTotal").textContent = results.length;
     const groups = new Map();
     for (const item of results) {
-      const display = displayValue(item);
-      const key = `${display.name}\u0000${display.capacity}`;
+      const display = groupDisplayValue(item);
+      const key = item.groupKey || `${display.name}\u0000${display.capacity}`;
       const current = groups.get(key) || { ...display, count:0 };
       current.count += 1;
       groups.set(key, current);
@@ -244,6 +255,6 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261003-v2", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261004-giftee-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();

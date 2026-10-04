@@ -1,9 +1,9 @@
-const CACHE_VERSION = "coupon-analyzer-20261003-v2";
+const CACHE_VERSION = "coupon-analyzer-20261004-giftee-v1";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css?v=20260922-v2",
-  "/analyzer.js?v=20261003-v2",
+  "/analyzer.js?v=20261004-giftee-v1",
   "/capture.js?v=20260922-v2",
   "/manifest.webmanifest?v=20260922-v2",
   "/header-character.svg?v=20260922-v2",
