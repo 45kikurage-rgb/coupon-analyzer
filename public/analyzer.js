@@ -27,6 +27,11 @@
     try {
       const url = new URL(value);
       if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) return false;
+      if (url.hostname === "apli.lawson.jp" && /^\/ldcp\/(?:coupon|login)\/?$/.test(url.pathname)) {
+        const campaigns = url.searchParams.getAll("campaignId"), codes = url.searchParams.getAll("encDataCode");
+        return campaigns.length === 1 && /^[A-Za-z0-9_-]{1,100}$/.test(campaigns[0]) &&
+          codes.length === 1 && /^[A-Za-z0-9_+\/-]{8,512}={0,2}$/.test(codes[0]);
+      }
       if (url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do") return true;
       if (url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb") return true;
       if (url.hostname === "g4b.giftee.biz") return /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname) && !url.search;
@@ -102,6 +107,7 @@
     if (item.site === "familymart") return "ファミリーマート";
     if (item.site === "misterdonut") return "ミスタードーナツ";
     if (item.site === "sbg") return "SBギフト";
+    if (item.site === "lawson_ldcp") return "ローソン";
     if (item.site === "starbucks") return "スターバックス";
     return "セブンイレブン";
   }
@@ -255,6 +261,6 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261004-giftee-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261007-lawson-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
