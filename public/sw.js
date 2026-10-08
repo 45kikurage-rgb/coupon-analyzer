@@ -1,9 +1,9 @@
-const CACHE_VERSION = "coupon-analyzer-20261007-lawson-v1";
+const CACHE_VERSION = "coupon-analyzer-20261008-filters-v1";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260922-v2",
-  "/analyzer.js?v=20261007-lawson-v1",
+  "/styles.css?v=20261008-filters-v1",
+  "/analyzer.js?v=20261008-filters-v1",
   "/capture.js?v=20260922-v2",
   "/manifest.webmanifest?v=20260922-v2",
   "/header-character.svg?v=20260922-v2",
@@ -53,3 +53,4 @@ self.addEventListener("fetch", (event) => {
     }
   })());
 });
+

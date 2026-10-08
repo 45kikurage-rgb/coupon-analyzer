@@ -9,7 +9,7 @@
   <meta name="application-name" content="クーポン判定">
   <link rel="manifest" href="/manifest.webmanifest?v=20260922-v3">
   <link rel="icon" type="image/svg+xml" href="/icon.svg?v=20260922-v3">
-  <link rel="stylesheet" href="/styles.css?v=20260922-v3">
+  <link rel="stylesheet" href="/styles.css?v=20261008-filters-v1">
 </head>
 <body>
 <main class="app-shell">
@@ -82,13 +82,21 @@
     <div class="results-title-row"><div><p class="result-kicker">解析結果</p><h2>URL合計 <strong id="resultTotal">0</strong>件</h2></div></div>
     <div class="breakdown-table" id="breakdownTable"></div>
     <div class="item-results">
-      <div class="item-results-heading"><h3>URLごとの結果</h3></div>
+      <div class="item-results-heading"><h3>URLごとの結果</h3><button id="clearResultFilters" type="button">絞り込み解除</button></div>
+      <div class="result-filters" aria-label="URLごとの結果の絞り込み">
+        <label>判定状態<select id="resultStatusFilter"><option value="">すべて</option><option value="ok">判定済み</option><option value="review">要確認・判定不能</option><option value="used">使用済み</option><option value="error">エラー</option></select></label>
+        <label>商品名・BOX名<select id="resultProductFilter"><option value="">すべて</option></select></label>
+        <label>容量・残高<select id="resultCapacityFilter"><option value="">すべて</option></select></label>
+        <label>検索<input id="resultSearchFilter" type="search" placeholder="番号・商品名・URL" autocomplete="off"></label>
+      </div>
+      <p class="result-filter-count" id="resultFilterCount" role="status" aria-live="polite"></p>
       <div class="result-list" id="resultList"></div>
     </div>
   </section>
   <footer>セブン・イレブン、ファミリーマート、Giftee Box、ミスドeギフト、スターバックス、SBギフト、ローソンの商品情報を読み取って判定します。</footer>
 </main>
 <script src="/capture.js?v=20260922-v3"></script>
-<script src="/analyzer.js?v=20261007-lawson-v1"></script>
+<script src="/analyzer.js?v=20261008-filters-v1"></script>
 </body>
 </html>
+

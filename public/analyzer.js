@@ -8,6 +8,12 @@
   const resultsSection = document.querySelector("#analysisResults");
   const resultList = document.querySelector("#resultList");
   const breakdownTable = document.querySelector("#breakdownTable");
+  const statusFilter = document.querySelector("#resultStatusFilter");
+  const productFilter = document.querySelector("#resultProductFilter");
+  const capacityFilter = document.querySelector("#resultCapacityFilter");
+  const searchFilter = document.querySelector("#resultSearchFilter");
+  const clearFilters = document.querySelector("#clearResultFilters");
+  const filterCount = document.querySelector("#resultFilterCount");
   const progress = document.querySelector("#analysisProgress");
   const percent = document.querySelector("#analysisPercent");
   const status = document.querySelector("#analysisStatus");
@@ -131,15 +137,54 @@
       groups.set(key, current);
     }
     breakdownTable.innerHTML = `<div class="breakdown-head"><span>商品名・BOX名</span><span>容量・残高</span><span>件数</span></div>${[...groups.values()].map(item => `<div class="breakdown-row"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.capacity)}</span><span>${item.count}件</span></div>`).join("")}`;
-    resultList.innerHTML = `<div class="result-list-head"><span>番号</span><span>商品名・BOX名</span><span>容量・操作</span><span>有効期限</span></div>${results.map((item, index) => {
+    updateFilterOptions(productFilter, results.map(item => displayValue(item).name));
+    updateFilterOptions(capacityFilter, results.map(item => displayValue(item).capacity));
+    renderResultList();
+    resultsSection.classList.remove("hidden");
+  }
+
+  function resultStatus(item) {
+    if (item.status === "used" || item.size === "used") return "used";
+    if (item.status === "error") return "error";
+    if (item.status === "needs_review" || item.size === "unknown" || item.size === "mixed" || !item.product || item.product === "商品名不明") return "review";
+    return "ok";
+  }
+
+  function updateFilterOptions(select, values) {
+    const previous = select.value;
+    const options = [...new Set(values.map(value => String(value || "")))].filter(Boolean).sort((a,b) => a.localeCompare(b,"ja"));
+    select.innerHTML = '<option value="">すべて</option>' + options.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+    select.value = options.includes(previous) ? previous : "";
+  }
+
+  function renderResultList() {
+    const query = searchFilter.value.normalize("NFKC").trim().toLocaleLowerCase("ja");
+    const visible = lastResults.map((item,index) => ({item,index})).filter(({item}) => {
+      const display = displayValue(item);
+      if (statusFilter.value && resultStatus(item) !== statusFilter.value) return false;
+      if (productFilter.value && String(display.name || "") !== productFilter.value) return false;
+      if (capacityFilter.value && String(display.capacity || "") !== capacityFilter.value) return false;
+      const text = [item.label,item.url,display.name,display.capacity,display.expiry,resultDetail(item)].join(" ").normalize("NFKC").toLocaleLowerCase("ja");
+      return !query || text.includes(query);
+    });
+    filterCount.textContent = `表示 ${visible.length}件 / 全 ${lastResults.length}件`;
+    clearFilters.disabled = ![statusFilter.value,productFilter.value,capacityFilter.value,searchFilter.value].some(Boolean);
+    resultList.innerHTML = `<div class="result-list-head"><span>番号</span><span>商品名・BOX名</span><span>容量・操作</span><span>有効期限</span></div>${visible.map(({item,index}) => {
       const display = displayValue(item);
       const badge = item.manualCorrection ? '<small class="manual-badge">手動修正中</small>' : '';
       const action = item.correctionKey && item.status !== "used" ? `<button class="correction-action" type="button" data-correction-index="${index}">${item.manualCorrection ? "修正・解除" : "修正"}</button>` : '';
       return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${action}</span><span>${escapeHtml(display.expiry)}</span></div>`;
-    }).join("")}<div class="processing-time">処理時間 ${(lastProcessingMs / 1000).toFixed(1)}秒</div>`;
+    }).join("")}${visible.length ? "" : '<div class="result-filter-empty">条件に一致するURLはありません。</div>'}<div class="processing-time">処理時間 ${(lastProcessingMs / 1000).toFixed(1)}秒</div>`;
     resultList.querySelectorAll("[data-correction-index]").forEach(button => button.addEventListener("click", () => editCorrection(Number(button.dataset.correctionIndex))));
-    resultsSection.classList.remove("hidden");
   }
+
+  function resetResultFilters() {
+    [statusFilter,productFilter,capacityFilter,searchFilter].forEach(element => { element.value = ""; });
+    renderResultList();
+  }
+  [statusFilter,productFilter,capacityFilter].forEach(element => element.addEventListener("change",renderResultList));
+  searchFilter.addEventListener("input",renderResultList);
+  clearFilters.addEventListener("click",resetResultFilters);
 
   async function requestJson(path, options) {
     const response = await fetch(path, options);
@@ -211,6 +256,7 @@
         status.textContent = `${mode === "fast" ? "高速" : "安定"}解析中… ${completed}/${items.length}件`;
       }
       lastProcessingMs = processingMs;
+      [statusFilter,productFilter,capacityFilter,searchFilter].forEach(element => { element.value = ""; });
       render(results);
       progress.value = 100;
       percent.textContent = "100%";
@@ -233,6 +279,7 @@
   function reset() {
     input.value = "";
     lastResults = [];
+    resetResultFilters();
     lastProcessingMs = 0;
     resultsSection.classList.add("hidden");
     resultList.innerHTML = "";
@@ -261,6 +308,7 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261007-lawson-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261008-filters-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
+
