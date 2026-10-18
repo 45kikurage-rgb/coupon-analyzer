@@ -24,7 +24,7 @@
   let running = false;
   let lastResults = [];
   let lastProcessingMs = 0;
-  const MAX_ANALYZE_URLS = 500;
+  const MAX_ANALYZE_URLS = 2000;
   const ANALYZE_BATCH_SIZE = 100;
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[char]);
@@ -43,6 +43,7 @@
       if (url.hostname === "g4b.giftee.biz") return /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname) && !url.search;
       if (url.hostname === "misterdonut.e-gift.co") return /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname);
       if (url.hostname === "gift.starbucks.co.jp") return /^\/e\/[A-Za-z0-9_-]{8,200}\/?$/.test(url.pathname);
+      if (url.hostname === "br.quocardpay.jp") return /^\/card\/[A-Z0-9]{16}\/?$/.test(url.pathname) && !url.search && !url.hash;
       if (url.hostname === "sbg.jp") return /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
       return false;
     } catch {
@@ -55,7 +56,7 @@
     let pendingLabel = "";
     const add = (label, raw) => {
       const value = String(raw || "").replaceAll("\\_", "_").replace(/[.,;、。\])}]+$/, "");
-      if (!isSupportedAnalysisUrl(value) || found.has(value) || found.size >= MAX_ANALYZE_URLS) return;
+      if (!isSupportedAnalysisUrl(value) || found.has(value) || found.size > MAX_ANALYZE_URLS) return;
       found.set(value, {
         label: /^\d{1,5}$/.test(String(label || "")) ? String(label) : String(found.size + 1),
         url: value
@@ -67,9 +68,9 @@
       for (const raw of trimmed.match(/https:\/\/[^\s<>"']+/gi) || []) {
         add(pendingLabel, raw);
         pendingLabel = "";
-        if (found.size >= MAX_ANALYZE_URLS) break;
+        if (found.size > MAX_ANALYZE_URLS) break;
       }
-      if (found.size >= MAX_ANALYZE_URLS) break;
+      if (found.size > MAX_ANALYZE_URLS) break;
     }
     return [...found.values()];
   }
@@ -81,14 +82,15 @@
   function updateDetection() {
     const count = supportedUrls().length;
     const captureCount = (input.value.match(/https:\/\/(?:coupon\.sej\.co\.jp\/order\/cpnsp_03\.do|ncpfa\.famima\.com\/prd\/ebcweb)\?[^\s<>"']+/gi) || []).length;
-    document.querySelector("#counter").textContent = `${count}件検出`;
-    analyzeStable.disabled = running || count === 0;
-    analyzeFast.disabled = running || count === 0;
+    document.querySelector("#counter").textContent = count > MAX_ANALYZE_URLS ? "2000件超（分けて貼り付けてください）" : `${count}件検出`;
+    analyzeStable.disabled = running || count === 0 || count > MAX_ANALYZE_URLS;
+    analyzeFast.disabled = running || count === 0 || count > MAX_ANALYZE_URLS;
     fastCapture.disabled = running || captureCount === 0;
     stableCapture.disabled = running || captureCount === 0;
   }
 
   function displayValue(item) {
+    if (item.site === "quocardpay") return { name:"QUOカードPay", capacity: Number.isSafeInteger(item.balance) && item.balance >= 0 ? `残高 ${item.balance.toLocaleString("ja-JP")}円（${item.balance === 0 ? "残高なし" : "残高あり"}）` : "残高確認不可", expiry:item.expiresOn || "—" };
     if (item.kind === "box") return { name:item.groupName || item.boxName || item.product, capacity:`残高 ${item.balance ?? 0}${item.balanceUnit || "ポイント"}`, expiry:item.expiresOn || "—" };
     if (item.kind === "gift") return { name:`${item.brand || "ブランド不明"} ${item.product}`, capacity:item.capacity || "ギフト", expiry:item.expiresAt || item.expiresOn || "不明" };
     const capacity = item.size === "used" ? "利用済み" : item.capacity || (item.size === "unknown" ? "判定不能" : item.size === "other" ? "その他" : "容量表記なし");
@@ -109,6 +111,7 @@
   function resultDetail(item) {
     if (item.status === "error") return item.message || "解析失敗";
     if (item.kind === "gift") return item.brand || "ギフト";
+    if (item.site === "quocardpay") return item.message || "QUOカードPay";
     if (item.site === "giftee_box") return "Giftee Box";
     if (item.site === "familymart") return "ファミリーマート";
     if (item.site === "misterdonut") return "ミスタードーナツ";
@@ -172,8 +175,9 @@
     resultList.innerHTML = `<div class="result-list-head"><span>番号</span><span>商品名・BOX名</span><span>容量・操作</span><span>有効期限</span></div>${visible.map(({item,index}) => {
       const display = displayValue(item);
       const badge = item.manualCorrection ? '<small class="manual-badge">手動修正中</small>' : '';
+      const open = isSupportedAnalysisUrl(item.url) ? `<a class="open-url-action" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-label="${escapeHtml(item.label)}番のURLを開く">URLを開く ↗</a>` : "";
       const action = item.correctionKey && item.status !== "used" ? `<button class="correction-action" type="button" data-correction-index="${index}">${item.manualCorrection ? "修正・解除" : "修正"}</button>` : '';
-      return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${action}</span><span>${escapeHtml(display.expiry)}</span></div>`;
+      return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${open}${action}</span><span>${escapeHtml(display.expiry)}</span></div>`;
     }).join("")}${visible.length ? "" : '<div class="result-filter-empty">条件に一致するURLはありません。</div>'}<div class="processing-time">処理時間 ${(lastProcessingMs / 1000).toFixed(1)}秒</div>`;
     resultList.querySelectorAll("[data-correction-index]").forEach(button => button.addEventListener("click", () => editCorrection(Number(button.dataset.correctionIndex))));
   }
@@ -228,7 +232,7 @@
 
   async function analyze(mode) {
     const items = supportedItems();
-    if (running || !items.length) return;
+    if (running || !items.length || items.length > MAX_ANALYZE_URLS) return;
     running = true;
     updateDetection();
     errorBox.classList.add("hidden");
@@ -242,13 +246,20 @@
       let processingMs = 0;
       for (let offset = 0; offset < items.length; offset += ANALYZE_BATCH_SIZE) {
         const chunk = items.slice(offset, offset + ANALYZE_BATCH_SIZE);
-        const payload = await requestJson("/api/analyze", {
-          method:"POST",
-          headers:{ "content-type":"application/json" },
-          body:JSON.stringify({ items:chunk, mode })
-        });
-        results.push(...(payload.results || []));
-        processingMs += Number(payload.processingMs || 0);
+        try {
+          const payload = await requestJson("/api/analyze", {
+            method:"POST",
+            headers:{ "content-type":"application/json" },
+            body:JSON.stringify({ items:chunk, mode })
+          });
+          const received = new Map((payload.results || []).map(item => [item.url, item]));
+          for (const item of chunk) results.push(received.has(item.url)
+            ? { ...received.get(item.url), url:item.url }
+            : { ...item, status:"error", size:"unknown", product:"商品名不明", message:"解析結果を取得できませんでした。URLから確認できます。" });
+          processingMs += Number(payload.processingMs || 0);
+        } catch {
+          results.push(...chunk.map(item => ({ ...item, status:"error", size:"unknown", product:"商品名不明", message:"通信に失敗しました。URLから確認できます。" })));
+        }
         const completed = Math.min(items.length, offset + chunk.length);
         const value = Math.min(95, 15 + Math.round(80 * completed / items.length));
         progress.value = value;
@@ -260,7 +271,7 @@
       render(results);
       progress.value = 100;
       percent.textContent = "100%";
-      status.textContent = "解析完了";
+      status.textContent = results.some(item => item.status === "error") ? "解析完了（一部取得失敗・結果からURLを確認できます）" : "解析完了";
       status.classList.add("ready");
       showResults.disabled = false;
       showResults.classList.add("ready");
@@ -308,7 +319,7 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261008-filters-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261018-quo-2000-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
 
