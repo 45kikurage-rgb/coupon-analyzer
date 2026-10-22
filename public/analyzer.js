@@ -50,6 +50,15 @@
     }
   }
 
+  // Normalize Lawson's public coupon route only for the link. The shared API also
+  // converts this route before fetching; keep the pasted URL unchanged for traceability.
+  function lawsonOpenUrl(value) {
+    if (!isSupportedAnalysisUrl(value)) return null;
+    const parsed = new URL(value);
+    if (parsed.hostname !== "apli.lawson.jp") return null;
+    return String(value).replace(/^(https:\/\/[^/?#]+)\/ldcp\/coupon(?=\/?(?:[?#]|$))/, "$1/ldcp/login");
+  }
+
   function supportedItems() {
     const found = new Map();
     let pendingLabel = "";
@@ -173,7 +182,9 @@
       const display = displayValue(item);
       const badge = item.manualCorrection ? '<small class="manual-badge">手動修正中</small>' : '';
       const action = item.correctionKey && item.status !== "used" ? `<button class="correction-action" type="button" data-correction-index="${index}">${item.manualCorrection ? "修正・解除" : "修正"}</button>` : '';
-      return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${action}</span><span>${escapeHtml(display.expiry)}</span></div>`;
+      const openUrl = lawsonOpenUrl(item.url);
+      const openAction = openUrl ? `<a class="result-open-link" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer" aria-label="ローソンのクーポンを開く">クーポンを開く ↗</a>` : "";
+      return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${action}${openAction}</span><span>${escapeHtml(display.expiry)}</span></div>`;
     }).join("")}${visible.length ? "" : '<div class="result-filter-empty">条件に一致するURLはありません。</div>'}<div class="processing-time">処理時間 ${(lastProcessingMs / 1000).toFixed(1)}秒</div>`;
     resultList.querySelectorAll("[data-correction-index]").forEach(button => button.addEventListener("click", () => editCorrection(Number(button.dataset.correctionIndex))));
   }
@@ -308,7 +319,7 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261008-filters-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261022-lawson-open-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
 
