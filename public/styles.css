@@ -92,3 +92,7 @@
 .result-filters select:focus,.result-filters input:focus{outline:2px solid #ffd43b;outline-offset:2px}
 .result-filter-count{margin:10px 0 0;color:#f7e8b8;font-size:.8rem}
 .result-filter-empty{padding:20px 12px;text-align:center;color:#c9c9c9;font-size:.85rem}
+
+/* Lawson voucher link: readable and tappable beside analysis details. */
+.result-open-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;width:100%;margin-top:6px;padding:6px 4px;border:2px solid #0a84ff;color:#fff;background:#132f50;text-align:center;text-decoration:none;font-size:.72rem;line-height:1.3;overflow-wrap:anywhere}
+.result-open-link:focus-visible{outline:2px solid #ffd43b;outline-offset:2px}
