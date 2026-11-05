@@ -11,6 +11,7 @@
   const statusFilter = document.querySelector("#resultStatusFilter");
   const productFilter = document.querySelector("#resultProductFilter");
   const capacityFilter = document.querySelector("#resultCapacityFilter");
+  const merchantFilter = document.querySelector("#resultMerchantFilter");
   const searchFilter = document.querySelector("#resultSearchFilter");
   const clearFilters = document.querySelector("#clearResultFilters");
   const filterCount = document.querySelector("#resultFilterCount");
@@ -104,6 +105,22 @@
     return { name:item.product, capacity, expiry:item.expiresOn || "—" };
   }
 
+
+  // The platform host is not a merchant. Prefer the actual API destination.
+  function merchantValue(item) {
+    const direct = String(item.redeemPlace || item.merchant || "").trim();
+    if (item.kind === "box" && (!direct || /^(?:giftee\s*box|引換先不明)$/i.test(direct))) return "交換先未選択";
+    if (direct && !/^(?:引換先不明|未判定|不明)$/i.test(direct)) return direct;
+    const known = {
+      seven: "セブンイレブン", familymart: "ファミリーマート",
+      misterdonut: "ミスタードーナツ", starbucks: "スターバックス",
+      lawson_ldcp: "ローソン"
+    };
+    if (known[item.site]) return known[item.site];
+    if (item.kind === "gift" && item.brand) return String(item.brand);
+    return "未判定";
+  }
+
   function groupDisplayValue(item) {
     if (item.kind === "box") {
       const name = item.groupName || item.boxName || item.product;
@@ -140,14 +157,16 @@
     const groups = new Map();
     for (const item of results) {
       const display = groupDisplayValue(item);
-      const key = item.groupKey || `${display.name}\u0000${display.capacity}`;
-      const current = groups.get(key) || { ...display, count:0 };
+      const merchant = merchantValue(item);
+       const key = item.groupKey || `${display.name}\u0000${display.capacity}\u0000${merchant}`;
+      const current = groups.get(key) || { ...display, merchant, count:0 };
       current.count += 1;
       groups.set(key, current);
     }
-    breakdownTable.innerHTML = `<div class="breakdown-head"><span>商品名・BOX名</span><span>容量・残高</span><span>件数</span></div>${[...groups.values()].map(item => `<div class="breakdown-row"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.capacity)}</span><span>${item.count}件</span></div>`).join("")}`;
+    breakdownTable.innerHTML = `<div class="breakdown-head"><span>商品名・BOX名</span><span>利用先</span><span>容量・残高</span><span>件数</span></div>${[...groups.values()].map(item => `<div class="breakdown-row"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.merchant)}</span><span>${escapeHtml(item.capacity)}</span><span>${item.count}件</span></div>`).join("")}`;
     updateFilterOptions(productFilter, results.map(item => displayValue(item).name));
     updateFilterOptions(capacityFilter, results.map(item => displayValue(item).capacity));
+    updateFilterOptions(merchantFilter, results.map(merchantValue));
     renderResultList();
     resultsSection.classList.remove("hidden");
   }
@@ -173,27 +192,29 @@
       if (statusFilter.value && resultStatus(item) !== statusFilter.value) return false;
       if (productFilter.value && String(display.name || "") !== productFilter.value) return false;
       if (capacityFilter.value && String(display.capacity || "") !== capacityFilter.value) return false;
-      const text = [item.label,item.url,display.name,display.capacity,display.expiry,resultDetail(item)].join(" ").normalize("NFKC").toLocaleLowerCase("ja");
+       if (merchantFilter.value && merchantValue(item) !== merchantFilter.value) return false;
+      const text = [item.label,item.url,display.name,merchantValue(item),display.capacity,display.expiry,resultDetail(item)].join(" ").normalize("NFKC").toLocaleLowerCase("ja");
       return !query || text.includes(query);
     });
     filterCount.textContent = `表示 ${visible.length}件 / 全 ${lastResults.length}件`;
-    clearFilters.disabled = ![statusFilter.value,productFilter.value,capacityFilter.value,searchFilter.value].some(Boolean);
+    clearFilters.disabled = ![statusFilter.value,productFilter.value,capacityFilter.value,merchantFilter.value,searchFilter.value].some(Boolean);
     resultList.innerHTML = `<div class="result-list-head"><span>番号</span><span>商品名・BOX名</span><span>容量・操作</span><span>有効期限</span></div>${visible.map(({item,index}) => {
       const display = displayValue(item);
-      const badge = item.manualCorrection ? '<small class="manual-badge">手動修正中</small>' : '';
+      const merchant = merchantValue(item);
+       const badge = item.manualCorrection ? '<small class="manual-badge">手動修正中</small>' : '';
       const action = item.correctionKey && item.status !== "used" ? `<button class="correction-action" type="button" data-correction-index="${index}">${item.manualCorrection ? "修正・解除" : "修正"}</button>` : '';
       const openUrl = lawsonOpenUrl(item.url);
       const openAction = openUrl ? `<a class="result-open-link" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer" aria-label="ローソンのクーポンを開く">クーポンを開く ↗</a>` : "";
-      return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${action}${openAction}</span><span>${escapeHtml(display.expiry)}</span></div>`;
+      return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong><small class="result-merchant">利用先：${escapeHtml(merchant)}</small>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${action}${openAction}</span><span>${escapeHtml(display.expiry)}</span></div>`;
     }).join("")}${visible.length ? "" : '<div class="result-filter-empty">条件に一致するURLはありません。</div>'}<div class="processing-time">処理時間 ${(lastProcessingMs / 1000).toFixed(1)}秒</div>`;
     resultList.querySelectorAll("[data-correction-index]").forEach(button => button.addEventListener("click", () => editCorrection(Number(button.dataset.correctionIndex))));
   }
 
   function resetResultFilters() {
-    [statusFilter,productFilter,capacityFilter,searchFilter].forEach(element => { element.value = ""; });
+    [statusFilter,productFilter,capacityFilter,merchantFilter,searchFilter].forEach(element => { element.value = ""; });
     renderResultList();
   }
-  [statusFilter,productFilter,capacityFilter].forEach(element => element.addEventListener("change",renderResultList));
+  [statusFilter,productFilter,capacityFilter,merchantFilter].forEach(element => element.addEventListener("change",renderResultList));
   searchFilter.addEventListener("input",renderResultList);
   clearFilters.addEventListener("click",resetResultFilters);
 
@@ -267,7 +288,7 @@
         status.textContent = `${mode === "fast" ? "高速" : "安定"}解析中… ${completed}/${items.length}件`;
       }
       lastProcessingMs = processingMs;
-      [statusFilter,productFilter,capacityFilter,searchFilter].forEach(element => { element.value = ""; });
+      [statusFilter,productFilter,capacityFilter,merchantFilter,searchFilter].forEach(element => { element.value = ""; });
       render(results);
       progress.value = 100;
       percent.textContent = "100%";
@@ -319,7 +340,7 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261022-lawson-open-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261106-redeem-place-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
 

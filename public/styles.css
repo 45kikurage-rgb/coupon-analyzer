@@ -96,3 +96,10 @@
 /* Lawson voucher link: readable and tappable beside analysis details. */
 .result-open-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;width:100%;margin-top:6px;padding:6px 4px;border:2px solid #0a84ff;color:#fff;background:#132f50;text-align:center;text-decoration:none;font-size:.72rem;line-height:1.3;overflow-wrap:anywhere}
 .result-open-link:focus-visible{outline:2px solid #ffd43b;outline-offset:2px}
+
+/* Show destination explicitly without squeezing the per-URL result into five narrow columns. */
+.breakdown-head,.breakdown-row{grid-template-columns:minmax(0,1.6fr) minmax(0,1.2fr) minmax(0,1fr) 68px}
+.breakdown-head>*,.breakdown-row>*{min-width:0;overflow-wrap:anywhere}
+.result-merchant{display:block;margin-top:5px;color:#b9d7f0;font-size:.73rem;line-height:1.4;overflow-wrap:anywhere}
+.result-filters label:last-child{grid-column:1/-1}
+@media(max-width:640px){.breakdown-head,.breakdown-row{grid-template-columns:minmax(0,1.55fr) minmax(0,1.1fr) minmax(0,1fr) 48px;font-size:.74rem}.breakdown-head>*,.breakdown-row>*{padding:7px 4px}}
