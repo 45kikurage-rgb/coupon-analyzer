@@ -30,6 +30,21 @@
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[char]);
 
+  function isPetitGiftDetail(url) {
+    if (url.pathname !== "/coupons/detail" || url.href.length > 2048) return false;
+    const required = {
+      app_id: /^\d{1,12}$/,
+      coupon_id: /^\d{1,12}$/,
+      user_id: /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i,
+      enc: /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/,
+    };
+    const params = url.searchParams;
+    return Object.entries(required).every(([key, pattern]) =>
+      params.getAll(key).length === 1 && pattern.test(params.get(key))) &&
+      params.getAll("t").length <= 1 && (!params.has("t") || /^\d{14}$/.test(params.get("t"))) &&
+      [...params.keys()].every(key => Object.hasOwn(required, key) || key === "t");
+  }
+
   function isSupportedAnalysisUrl(value) {
     try {
       const url = new URL(value);
@@ -44,6 +59,7 @@
       if (url.hostname === "g4b.giftee.biz") return /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname) && !url.search;
       if (url.hostname === "misterdonut.e-gift.co") return /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname);
       if (url.hostname === "gift.starbucks.co.jp") return /^\/e\/[A-Za-z0-9_-]{8,200}\/?$/.test(url.pathname);
+      if (url.hostname === "coupon.petit.gift") return isPetitGiftDetail(url);
       if (url.hostname === "sbg.jp") return /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
       return false;
     } catch {
@@ -102,7 +118,7 @@
     if (item.kind === "box") return { name:item.groupName || item.boxName || item.product, capacity:`残高 ${item.balance ?? 0}${item.balanceUnit || "ポイント"}`, expiry:item.expiresOn || "—" };
     if (item.kind === "gift") return { name:`${item.brand || "ブランド不明"} ${item.product}`, capacity:item.capacity || "ギフト", expiry:item.expiresAt || item.expiresOn || "不明" };
     const capacity = item.size === "used" ? "利用済み" : item.capacity || (item.size === "unknown" ? "判定不能" : item.size === "other" ? "その他" : "容量表記なし");
-    return { name:item.product, capacity, expiry:item.expiresOn || "—" };
+    return { name:item.product, capacity, expiry:(item.site === "petit_gift" ? item.expiresAt : item.expiresOn) || "—" };
   }
 
 
@@ -139,6 +155,7 @@
     if (item.site === "familymart") return "ファミリーマート";
     if (item.site === "misterdonut") return "ミスタードーナツ";
     if (item.site === "sbg") return "SBギフト";
+    if (item.site === "petit_gift") return "プチギフト";
     if (item.site === "lawson_ldcp") return "ローソン";
     if (item.site === "starbucks") return "スターバックス";
     return "セブンイレブン";
@@ -340,7 +357,7 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261106-redeem-place-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261106-petit-gift-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
 
