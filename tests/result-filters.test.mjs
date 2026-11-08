@@ -36,7 +36,7 @@ test('result filters combine without renumbering, changing totals, or correcting
     document,navigator:{},URL,fetch,prompt:()=>prompts.shift(),confirm:()=>false,alert:()=>{}
   });
   const get=id=>elements.get('#'+id);
-  get('input').value=results.map(row=>row.url).join('\n');get('input').input();
+  get('input').value=results.map(row=>`${row.label}\n${row.url}`).join('\n');get('input').input();
   await get('analyzeStart').click();
   assert.equal(get('resultFilterCount').textContent,'表示 5件 / 全 5件');
   const fullBreakdown=get('breakdownTable').innerHTML;
