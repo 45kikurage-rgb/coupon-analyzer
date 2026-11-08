@@ -24,7 +24,7 @@ function setup(results) {
   return {
     get,
     async render() {
-      get("#input").value=results.map(item=>item.url).join("\n");
+      get("#input").value=results.map(item=>`${item.label}\n${item.url}`).join("\n");
       get("#input").input();
       await get("#analyzeStart").click();
     }

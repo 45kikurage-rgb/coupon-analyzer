@@ -25,7 +25,7 @@
   let running = false;
   let lastResults = [];
   let lastProcessingMs = 0;
-  const MAX_ANALYZE_URLS = 500;
+  const MAX_ANALYZE_URLS = 2000;
   const ANALYZE_BATCH_SIZE = 100;
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[char]);
@@ -81,7 +81,8 @@
     let pendingLabel = "";
     const add = (label, raw) => {
       const value = String(raw || "").replaceAll("\\_", "_").replace(/[.,;、。\])}]+$/, "");
-      if (!isSupportedAnalysisUrl(value) || found.has(value) || found.size >= MAX_ANALYZE_URLS) return;
+      // Keep one extra item so over-limit input is rejected, never silently cut off.
+      if (!isSupportedAnalysisUrl(value) || found.has(value) || found.size > MAX_ANALYZE_URLS) return;
       found.set(value, {
         label: /^\d{1,5}$/.test(String(label || "")) ? String(label) : String(found.size + 1),
         url: value
@@ -91,11 +92,12 @@
       const trimmed = line.trim();
       if (/^\d{1,5}$/.test(trimmed)) pendingLabel = trimmed;
       for (const raw of trimmed.match(/https:\/\/[^\s<>"']+/gi) || []) {
-        add(pendingLabel, raw);
+        const inlineLabel = trimmed.match(/^(\d{1,5})\s+https:\/\//i)?.[1];
+        add(inlineLabel || pendingLabel, raw);
         pendingLabel = "";
-        if (found.size >= MAX_ANALYZE_URLS) break;
+        if (found.size > MAX_ANALYZE_URLS) break;
       }
-      if (found.size >= MAX_ANALYZE_URLS) break;
+      if (found.size > MAX_ANALYZE_URLS) break;
     }
     return [...found.values()];
   }
@@ -107,9 +109,13 @@
   function updateDetection() {
     const count = supportedUrls().length;
     const captureCount = (input.value.match(/https:\/\/(?:coupon\.sej\.co\.jp\/order\/cpnsp_03\.do|ncpfa\.famima\.com\/prd\/ebcweb)\?[^\s<>"']+/gi) || []).length;
-    document.querySelector("#counter").textContent = `${count}件検出`;
-    analyzeStable.disabled = running || count === 0;
-    analyzeFast.disabled = running || count === 0;
+    const overLimit = count > MAX_ANALYZE_URLS;
+    document.querySelector("#counter").textContent = overLimit ? "2,000件超（分けてください）" : `${count}件検出`;
+    analyzeStable.disabled = running || count === 0 || overLimit;
+    analyzeFast.disabled = running || count === 0 || overLimit;
+    input.disabled = running;
+    pasteButton.disabled = running;
+    clearButton.disabled = running;
     fastCapture.disabled = running || captureCount === 0;
     stableCapture.disabled = running || captureCount === 0;
   }
@@ -277,13 +283,15 @@
 
   async function analyze(mode) {
     const items = supportedItems();
-    if (running || !items.length) return;
+    if (running || !items.length || items.length > MAX_ANALYZE_URLS) return;
     running = true;
     updateDetection();
     errorBox.classList.add("hidden");
     resultsSection.classList.add("hidden");
-    progress.value = 15;
-    percent.textContent = "15%";
+    showResults.disabled = true;
+    showResults.classList.remove("ready");
+    progress.value = 0;
+    percent.textContent = "0%";
     status.textContent = mode === "fast" ? "高速解析中…" : "安定解析中…";
     status.classList.remove("ready");
     try {
@@ -291,15 +299,23 @@
       let processingMs = 0;
       for (let offset = 0; offset < items.length; offset += ANALYZE_BATCH_SIZE) {
         const chunk = items.slice(offset, offset + ANALYZE_BATCH_SIZE);
-        const payload = await requestJson("/api/analyze", {
-          method:"POST",
-          headers:{ "content-type":"application/json" },
-          body:JSON.stringify({ items:chunk, mode })
-        });
-        results.push(...(payload.results || []));
-        processingMs += Number(payload.processingMs || 0);
+        try {
+          const payload = await requestJson("/api/analyze", {
+            method:"POST",
+            headers:{ "content-type":"application/json" },
+            body:JSON.stringify({ items:chunk, mode })
+          });
+          const byUrl = new Map((Array.isArray(payload.results) ? payload.results : []).filter(item => item && typeof item.url === "string").map(item => [item.url, item]));
+          results.push(...chunk.map(item => byUrl.has(item.url)
+            ? { ...byUrl.get(item.url), ...item }
+            : { ...item, product:"商品名不明", size:"unknown", status:"error", message:"解析結果を受信できませんでした。再解析してください。" }));
+          processingMs += Number(payload.processingMs || 0);
+        } catch (error) {
+          // Preserve completed batches and continue with the remaining URLs.
+          results.push(...chunk.map(item => ({ ...item, product:"商品名不明", size:"unknown", status:"error", message:error instanceof Error ? error.message : "通信に失敗しました。再解析してください。" })));
+        }
         const completed = Math.min(items.length, offset + chunk.length);
-        const value = Math.min(95, 15 + Math.round(80 * completed / items.length));
+        const value = Math.round(100 * completed / items.length);
         progress.value = value;
         percent.textContent = `${value}%`;
         status.textContent = `${mode === "fast" ? "高速" : "安定"}解析中… ${completed}/${items.length}件`;
@@ -309,7 +325,8 @@
       render(results);
       progress.value = 100;
       percent.textContent = "100%";
-      status.textContent = "解析完了";
+      const failed = results.filter(item => item.status === "error").length;
+      status.textContent = `解析完了 ${results.length}/${items.length}件${failed ? `（判定不能 ${failed}件）` : ""}`;
       status.classList.add("ready");
       showResults.disabled = false;
       showResults.classList.add("ready");
@@ -357,7 +374,7 @@
   updateDetection();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261106-petit-gift-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261108-analysis-2000-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
 
