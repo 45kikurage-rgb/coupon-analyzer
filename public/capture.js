@@ -37,7 +37,9 @@
         const seven = url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do" && Boolean(url.searchParams.get("hansoku_id"));
         const family = url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb" &&
           Boolean(url.searchParams.get("eKey")) && Boolean(url.searchParams.get("cpNo")) && Boolean(url.searchParams.get("gyNo"));
-        if (seven || family) supported.push(url.toString());
+        const petit = url.hostname === "coupon.petit.gift" && url.pathname === "/coupons/detail" &&
+          ["app_id", "coupon_id", "user_id", "enc"].every(key => url.searchParams.has(key));
+        if (seven || family || petit) supported.push(url.toString());
       } catch {
         // 入力途中は無視し、Workerでも再検証します。
       }
@@ -121,7 +123,7 @@
   function createSuccess(payload, index, processingMode, retries) {
     const sourceBytes = base64ToBytes(payload.base64);
     const sourceBlob = new Blob([sourceBytes], { type:payload.mimeType || "image/svg+xml" });
-    const site = payload.site === "familymart" ? "familymart" : "seven";
+    const site = payload.site === "petit_gift" ? "petit_gift" : payload.site === "familymart" ? "familymart" : "seven";
     return {
       ...payload,
       base64: undefined,
@@ -277,7 +279,7 @@
     if (running) return;
     const urls = onlyFailed ? state.urls : extract(input.value);
     if (!urls.length) {
-      statusEl.textContent = "対応するセブン・ファミリーマートのURLが見つかりません。";
+      statusEl.textContent = "対応するセブン・ファミリーマート・プチギフトのURLが見つかりません。";
       statusEl.className = "status error";
       return;
     }
@@ -492,4 +494,5 @@
     });
   }
 })();
+
 

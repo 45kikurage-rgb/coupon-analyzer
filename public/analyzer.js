@@ -108,7 +108,7 @@
 
   function updateDetection() {
     const count = supportedUrls().length;
-    const captureCount = (input.value.match(/https:\/\/(?:coupon\.sej\.co\.jp\/order\/cpnsp_03\.do|ncpfa\.famima\.com\/prd\/ebcweb)\?[^\s<>"']+/gi) || []).length;
+    const captureCount = (input.value.match(/https:\/\/(?:coupon\.sej\.co\.jp\/order\/cpnsp_03\.do|ncpfa\.famima\.com\/prd\/ebcweb|coupon\.petit\.gift\/coupons\/detail)\?[^\s<>"']+/gi) || []).length;
     const overLimit = count > MAX_ANALYZE_URLS;
     document.querySelector("#counter").textContent = overLimit ? "2,000件超（分けてください）" : `${count}件検出`;
     analyzeStable.disabled = running || count === 0 || overLimit;
@@ -377,4 +377,5 @@
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261108-analysis-2000-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
+
 
