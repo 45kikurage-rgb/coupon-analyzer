@@ -6,7 +6,7 @@
   const FAST_CONCURRENCY = 10;
   const FAST_FALLBACK_CONCURRENCY = 6;
   const FAMILY_CONCURRENCY = 4;
-  const RETRY_DELAYS = [1500, 4000];
+  const RETRY_DELAYS = [1500, 4000, 4000, 4000, 4000];
 
   const input = document.querySelector("#input");
   const stableStart = document.querySelector("#stableStart");
