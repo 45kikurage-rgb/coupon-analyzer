@@ -39,11 +39,12 @@
           Boolean(url.searchParams.get("eKey")) && Boolean(url.searchParams.get("cpNo")) && Boolean(url.searchParams.get("gyNo"));
         const petit = url.hostname === "coupon.petit.gift" && url.pathname === "/coupons/detail" &&
           ["app_id", "coupon_id", "user_id", "enc"].every(key => url.searchParams.has(key));
-        if (seven || family || petit) supported.push(url.toString());
+        const sbg = url.hostname === "sbg.jp" && /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
+        if (seven || family || petit || sbg) supported.push(url.toString());
       } catch {
         // 入力途中は無視し、Workerでも再検証します。
       }
-      if (supported.length >= MAX_URLS) break;
+
     }
     return supported;
   }
@@ -123,7 +124,7 @@
   function createSuccess(payload, index, processingMode, retries) {
     const sourceBytes = base64ToBytes(payload.base64);
     const sourceBlob = new Blob([sourceBytes], { type:payload.mimeType || "image/svg+xml" });
-    const site = payload.site === "petit_gift" ? "petit_gift" : payload.site === "familymart" ? "familymart" : "seven";
+    const site = payload.site === "sbg" ? "sbg" : payload.site === "petit_gift" ? "petit_gift" : payload.site === "familymart" ? "familymart" : "seven";
     return {
       ...payload,
       base64: undefined,
@@ -279,11 +280,17 @@
     if (running) return;
     const urls = onlyFailed ? state.urls : extract(input.value);
     if (!urls.length) {
-      statusEl.textContent = "対応するセブン・ファミリーマート・プチギフトのURLが見つかりません。";
+      statusEl.textContent = "対応するセブン・ファミリーマート・プチギフト・SBギフトのURLが見つかりません。";
       statusEl.className = "status error";
       return;
     }
 
+    if (urls.length > MAX_URLS) {
+      resultSection.classList.remove("hidden");
+      statusEl.textContent = `撮影は1回${MAX_URLS}件までです。${urls.length}件を分けて貼り付けてください。`;
+      statusEl.className = "status error";
+      return;
+    }
     running = true;
     setButtonsDisabled(true);
     zipAll.disabled = true;

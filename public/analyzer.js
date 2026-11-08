@@ -108,7 +108,7 @@
 
   function updateDetection() {
     const count = supportedUrls().length;
-    const captureCount = (input.value.match(/https:\/\/(?:coupon\.sej\.co\.jp\/order\/cpnsp_03\.do|ncpfa\.famima\.com\/prd\/ebcweb|coupon\.petit\.gift\/coupons\/detail)\?[^\s<>"']+/gi) || []).length;
+    const captureCount = supportedUrls().filter(value => ["coupon.sej.co.jp", "ncpfa.famima.com", "coupon.petit.gift", "sbg.jp"].includes(new URL(value).hostname)).length;
     const overLimit = count > MAX_ANALYZE_URLS;
     document.querySelector("#counter").textContent = overLimit ? "2,000件超（分けてください）" : `${count}件検出`;
     analyzeStable.disabled = running || count === 0 || overLimit;
@@ -156,6 +156,7 @@
 
   function resultDetail(item) {
     if (item.status === "error") return item.message || "解析失敗";
+    if (item.status === "needs_review" && item.message) return item.message;
     if (item.kind === "gift") return item.brand || "ギフト";
     if (item.site === "giftee_box") return "Giftee Box";
     if (item.site === "familymart") return "ファミリーマート";

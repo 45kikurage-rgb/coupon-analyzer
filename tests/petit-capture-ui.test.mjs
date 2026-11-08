@@ -26,6 +26,10 @@ test("Petit Gift enables both capture buttons as well as analysis",()=>{
   assert.equal(get("#fastStart").disabled,false);
   assert.equal(get("#stableStart").disabled,false);
   assert.equal(get("#analyzeStart").disabled,false);
+  input.value="https://sbg.jp/cp/exchange/888/"+"a".repeat(32);
+  for(const f of input.listeners.input)f();
+  assert.equal(get("#fastStart").disabled,false);
+  assert.equal(get("#stableStart").disabled,false);
   input.value="https://example.org/not-a-coupon";
   for(const f of input.listeners.input)f();
   assert.equal(get("#fastStart").disabled,true);

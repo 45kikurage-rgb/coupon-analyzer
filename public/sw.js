@@ -1,10 +1,10 @@
-const CACHE_VERSION = "coupon-analyzer-20261108-petit-capture";
+const CACHE_VERSION = "coupon-analyzer-20261109-sbg-capture";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css?v=20261106-redeem-place-v1",
-  "/analyzer.js?v=20261108-petit-capture",
-  "/capture.js?v=20261108-petit-capture",
+  "/analyzer.js?v=20261109-sbg-capture",
+  "/capture.js?v=20261109-sbg-capture",
   "/manifest.webmanifest?v=20260922-v2",
   "/header-character.svg?v=20260922-v2",
   "/icon.svg?v=20260922-v2"
