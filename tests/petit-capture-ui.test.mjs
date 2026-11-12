@@ -30,8 +30,18 @@ test("Petit Gift enables both capture buttons as well as analysis",()=>{
   for(const f of input.listeners.input)f();
   assert.equal(get("#fastStart").disabled,false);
   assert.equal(get("#stableStart").disabled,false);
+  input.value="https://www.asahibeer-cp.jp/brand/bitter-ist/cp/261111-261124-fixture/coupon/lw/index.html?code=000000000000000012";
+  for(const f of input.listeners.input)f();
+  assert.equal(get("#fastStart").disabled,false);
+  assert.equal(get("#stableStart").disabled,false);
+  assert.equal(get("#analyzeStart").disabled,false);
+  input.value += "&code=000000000000000012";
+  for(const f of input.listeners.input)f();
+  assert.equal(get("#fastStart").disabled,true);
+  assert.equal(get("#analyzeStart").disabled,true);
   input.value="https://example.org/not-a-coupon";
   for(const f of input.listeners.input)f();
   assert.equal(get("#fastStart").disabled,true);
 });
+
 

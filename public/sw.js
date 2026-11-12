@@ -1,10 +1,10 @@
-const CACHE_VERSION = "coupon-analyzer-20261109-retry5";
+const CACHE_VERSION = "coupon-analyzer-20261112-asahi-v1";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css?v=20261106-redeem-place-v1",
-  "/analyzer.js?v=20261109-retry5",
-  "/capture.js?v=20261109-retry5",
+  "/analyzer.js?v=20261112-asahi-v1",
+  "/capture.js?v=20261112-asahi-v1",
   "/manifest.webmanifest?v=20260922-v2",
   "/header-character.svg?v=20260922-v2",
   "/icon.svg?v=20260922-v2"
@@ -53,5 +53,6 @@ self.addEventListener("fetch", (event) => {
     }
   })());
 });
+
 
 

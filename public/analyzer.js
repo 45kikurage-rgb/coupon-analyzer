@@ -60,6 +60,10 @@
       if (url.hostname === "misterdonut.e-gift.co") return /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname);
       if (url.hostname === "gift.starbucks.co.jp") return /^\/e\/[A-Za-z0-9_-]{8,200}\/?$/.test(url.pathname);
       if (url.hostname === "coupon.petit.gift") return isPetitGiftDetail(url);
+      if (url.protocol === "https:" && !url.username && !url.password && (!url.port || url.port === "443") && !url.hash &&
+          url.hostname === "www.asahibeer-cp.jp" && /^\/brand\/bitter-ist\/cp\/\d{6}-\d{6}-[a-z0-9]+\/coupon\/lw\/index\.html$/.test(url.pathname) &&
+          url.searchParams.getAll("code").length === 1 && /^0\d{17}$/.test(url.searchParams.get("code")) &&
+          [...url.searchParams.keys()].every(key => key === "code")) return true;
       if (url.hostname === "sbg.jp") return /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
       return false;
     } catch {
@@ -108,7 +112,7 @@
 
   function updateDetection() {
     const count = supportedUrls().length;
-    const captureCount = supportedUrls().filter(value => ["coupon.sej.co.jp", "ncpfa.famima.com", "coupon.petit.gift", "sbg.jp"].includes(new URL(value).hostname)).length;
+    const captureCount = supportedUrls().filter(value => ["coupon.sej.co.jp", "ncpfa.famima.com", "coupon.petit.gift", "sbg.jp", "www.asahibeer-cp.jp"].includes(new URL(value).hostname)).length;
     const overLimit = count > MAX_ANALYZE_URLS;
     document.querySelector("#counter").textContent = overLimit ? "2,000件超（分けてください）" : `${count}件検出`;
     analyzeStable.disabled = running || count === 0 || overLimit;
@@ -161,6 +165,7 @@
     if (item.site === "giftee_box") return "Giftee Box";
     if (item.site === "familymart") return "ファミリーマート";
     if (item.site === "misterdonut") return "ミスタードーナツ";
+    if (item.site === "asahi_coupon") return "アサヒクーポン";
     if (item.site === "sbg") return "SBギフト";
     if (item.site === "petit_gift") return "プチギフト";
     if (item.site === "lawson_ldcp") return "ローソン";
@@ -378,5 +383,6 @@
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261108-analysis-2000-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
   }
 })();
+
 
 

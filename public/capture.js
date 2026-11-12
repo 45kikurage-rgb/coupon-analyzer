@@ -40,7 +40,11 @@
         const petit = url.hostname === "coupon.petit.gift" && url.pathname === "/coupons/detail" &&
           ["app_id", "coupon_id", "user_id", "enc"].every(key => url.searchParams.has(key));
         const sbg = url.hostname === "sbg.jp" && /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
-        if (seven || family || petit || sbg) supported.push(url.toString());
+        const asahi = url.protocol === "https:" && !url.username && !url.password && (!url.port || url.port === "443") && !url.hash &&
+          url.hostname === "www.asahibeer-cp.jp" && /^\/brand\/bitter-ist\/cp\/\d{6}-\d{6}-[a-z0-9]+\/coupon\/lw\/index\.html$/.test(url.pathname) &&
+          url.searchParams.getAll("code").length === 1 && /^0\d{17}$/.test(url.searchParams.get("code")) &&
+          [...url.searchParams.keys()].every(key => key === "code");
+        if (seven || family || petit || sbg || asahi) supported.push(url.toString());
       } catch {
         // 入力途中は無視し、Workerでも再検証します。
       }
@@ -124,7 +128,7 @@
   function createSuccess(payload, index, processingMode, retries) {
     const sourceBytes = base64ToBytes(payload.base64);
     const sourceBlob = new Blob([sourceBytes], { type:payload.mimeType || "image/svg+xml" });
-    const site = payload.site === "sbg" ? "sbg" : payload.site === "petit_gift" ? "petit_gift" : payload.site === "familymart" ? "familymart" : "seven";
+    const site = payload.site === "asahi_coupon" ? "asahi_coupon" : payload.site === "sbg" ? "sbg" : payload.site === "petit_gift" ? "petit_gift" : payload.site === "familymart" ? "familymart" : "seven";
     return {
       ...payload,
       base64: undefined,
@@ -501,5 +505,6 @@
     });
   }
 })();
+
 
 
