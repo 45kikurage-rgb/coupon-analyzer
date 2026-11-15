@@ -16,7 +16,7 @@ function setup() {
     });
     return nodes.get(key);
   };
-  vm.runInNewContext(fs.readFileSync(new URL('../public/analyzer.js', import.meta.url), 'utf8'), {
+  vm.runInNewContext((fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL('../public/analyzer.js', import.meta.url), 'utf8')), {
     document: { querySelector: get }, navigator: {}, URL,
     fetch: async (path, options) => {
       const body = JSON.parse(options.body);

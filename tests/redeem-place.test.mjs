@@ -18,7 +18,7 @@ function setup(results) {
     assert.equal(path, "/api/analyze");
     return {ok:true,json:async()=>({results,processingMs:12})};
   };
-  vm.runInNewContext(fs.readFileSync(new URL("../public/analyzer.js",import.meta.url),"utf8"),{
+  vm.runInNewContext((fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL("../public/analyzer.js",import.meta.url),"utf8")),{
     document:{querySelector:get},navigator:{},URL,fetch
   });
   return {

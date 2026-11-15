@@ -22,6 +22,8 @@
   const showResults = document.querySelector("#showResults");
   const fastCapture = document.querySelector("#fastStart");
   const stableCapture = document.querySelector("#stableStart");
+  const operations = document.couponOperations ||= { owner: null, refresh: new Set() };
+  const notifyOperationChange = () => operations.refresh.forEach(refresh => refresh());
   let running = false;
   let lastResults = [];
   let lastProcessingMs = 0;
@@ -30,79 +32,7 @@
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[char]);
 
-  function isPetitGiftDetail(url) {
-    if (url.pathname !== "/coupons/detail" || url.href.length > 2048) return false;
-    const required = {
-      app_id: /^\d{1,12}$/,
-      coupon_id: /^\d{1,12}$/,
-      user_id: /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i,
-      enc: /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/,
-    };
-    const params = url.searchParams;
-    return Object.entries(required).every(([key, pattern]) =>
-      params.getAll(key).length === 1 && pattern.test(params.get(key))) &&
-      params.getAll("t").length <= 1 && (!params.has("t") || /^\d{14}$/.test(params.get("t"))) &&
-      [...params.keys()].every(key => Object.hasOwn(required, key) || key === "t");
-  }
-
-  function giftWalletSourceUrl(value) {
-    try {
-      const wallet = new URL(value);
-      if (wallet.href.length > 2048 || wallet.protocol !== "https:" ||
-          wallet.hostname !== "wallet.vaton.jp" || wallet.username || wallet.password ||
-          (wallet.port && wallet.port !== "443") || wallet.hash ||
-          !/^\/lp\/campaign_tiktok\/?$/.test(wallet.pathname)) return null;
-      const params = wallet.searchParams;
-      if (params.getAll("gift_origin").length !== 1 || params.get("gift_origin") !== "g4b" ||
-          params.getAll("gift_url").length !== 1 || params.getAll("referer").length > 1 ||
-          (params.has("referer") && params.get("referer") !== "giftee_box") ||
-          [...params.keys()].some(key => !["gift_origin", "gift_url", "referer"].includes(key))) return null;
-      const source = new URL(params.get("gift_url"));
-      if (source.protocol !== "https:" || source.hostname !== "g4b.giftee.biz" ||
-          source.username || source.password || (source.port && source.port !== "443") ||
-          source.search || source.hash ||
-          !/^\/giftee_boxes\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?:\/(?:home|gifts))?\/?$/i.test(source.pathname)) return null;
-      return source.toString();
-    } catch {
-      return null;
-    }
-  }
-
-  function isSupportedAnalysisUrl(value) {
-    try {
-      const url = new URL(value);
-      if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) return false;
-      if (url.hostname === "apli.lawson.jp" && /^\/ldcp\/(?:coupon|login)\/?$/.test(url.pathname)) {
-        const campaigns = url.searchParams.getAll("campaignId"), codes = url.searchParams.getAll("encDataCode");
-        return campaigns.length === 1 && /^[A-Za-z0-9_-]{1,100}$/.test(campaigns[0]) &&
-          codes.length === 1 && /^[A-Za-z0-9_+\/-]{8,512}={0,2}$/.test(codes[0]);
-      }
-      if (url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do") return true;
-      if (url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb") return true;
-      if (giftWalletSourceUrl(value)) return true;
-      if (url.hostname === "g4b.giftee.biz") return /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname) && !url.search;
-      if (url.hostname === "misterdonut.e-gift.co") return /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname);
-      if (url.hostname === "gift.starbucks.co.jp") return /^\/e\/[A-Za-z0-9_-]{8,200}\/?$/.test(url.pathname);
-      if (url.hostname === "coupon.petit.gift") return isPetitGiftDetail(url);
-      if (url.protocol === "https:" && !url.username && !url.password && (!url.port || url.port === "443") && !url.hash &&
-          url.hostname === "www.asahibeer-cp.jp" && /^\/brand\/bitter-ist\/cp\/\d{6}-\d{6}-[a-z0-9]+\/coupon\/lw\/index\.html$/.test(url.pathname) &&
-          url.searchParams.getAll("code").length === 1 && /^0\d{17}$/.test(url.searchParams.get("code")) &&
-          [...url.searchParams.keys()].every(key => key === "code")) return true;
-      if (url.hostname === "sbg.jp") return /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
-      return false;
-    } catch {
-      return false;
-    }
-  }
-
-  // Normalize Lawson's public coupon route only for the link. The shared API also
-  // converts this route before fetching; keep the pasted URL unchanged for traceability.
-  function lawsonOpenUrl(value) {
-    if (!isSupportedAnalysisUrl(value)) return null;
-    const parsed = new URL(value);
-    if (parsed.hostname !== "apli.lawson.jp") return null;
-    return String(value).replace(/^(https:\/\/[^/?#]+)\/ldcp\/coupon(?=\/?(?:[?#]|$))/, "$1/ldcp/login");
-  }
+  const { giftWalletSourceUrl, isSupportedAnalysisUrl, lawsonOpenUrl, isSupportedCaptureUrl } = globalThis.CouponUrlRules;
 
   function supportedItems() {
     const found = new Map();
@@ -136,20 +66,27 @@
 
   function updateDetection() {
     const count = supportedUrls().length;
-    const captureCount = supportedUrls().filter(value => ["coupon.sej.co.jp", "ncpfa.famima.com", "coupon.petit.gift", "sbg.jp", "www.asahibeer-cp.jp"].includes(new URL(value).hostname)).length;
+    const captureCount = supportedUrls().filter(isSupportedCaptureUrl).length;
+    const busy = Boolean(operations.owner);
     const overLimit = count > MAX_ANALYZE_URLS;
     document.querySelector("#counter").textContent = overLimit ? "2,000件超（分けてください）" : `${count}件検出`;
-    analyzeStable.disabled = running || count === 0 || overLimit;
-    analyzeFast.disabled = running || count === 0 || overLimit;
-    input.disabled = running;
-    pasteButton.disabled = running;
-    clearButton.disabled = running;
-    fastCapture.disabled = running || captureCount === 0;
-    stableCapture.disabled = running || captureCount === 0;
+    analyzeStable.disabled = busy || count === 0 || overLimit;
+    analyzeFast.disabled = busy || count === 0 || overLimit;
+    input.disabled = busy;
+    pasteButton.disabled = busy;
+    clearButton.disabled = busy;
+    fastCapture.disabled = busy || captureCount === 0;
+    stableCapture.disabled = busy || captureCount === 0;
+  }
+
+  operations.refresh.add(updateDetection);
+
+  function balanceText(value, unit) {
+    return Number.isFinite(value) && value >= 0 ? `${value}${unit || "ポイント"}` : "不明";
   }
 
   function displayValue(item) {
-    if (item.kind === "box") return { name:item.groupName || item.boxName || item.product, capacity:`残高 ${item.balance ?? 0}${item.balanceUnit || "ポイント"}`, expiry:item.expiresOn || "—" };
+    if (item.kind === "box") return { name:item.groupName || item.boxName || item.product, capacity:`残高 ${balanceText(item.balance, item.balanceUnit)}`, expiry:item.expiresOn || "—" };
     if (item.kind === "gift") return { name:`${item.brand || "ブランド不明"} ${item.product}`, capacity:item.capacity || "ギフト", expiry:item.expiresAt || item.expiresOn || "不明" };
     const capacity = item.size === "used" ? "利用済み" : item.capacity || (item.size === "unknown" ? "判定不能" : item.size === "other" ? "その他" : "容量表記なし");
     return { name:item.product, capacity, expiry:(item.site === "petit_gift" ? item.expiresAt : item.expiresOn) || "—" };
@@ -176,13 +113,13 @@
       const name = item.groupName || item.boxName || item.product;
       const capacity = item.boxCategory === "eraberu_pay"
         ? "金額を問わず1グループ"
-        : item.groupSpecification || `${item.balance ?? 0}${item.balanceUnit || "ポイント"}`;
+        : item.groupSpecification || balanceText(Object.hasOwn(item, "initialBalance") ? item.initialBalance : item.balance, item.balanceUnit);
       return { name, capacity, expiry:item.expiresOn || "—" };
     }
     return displayValue(item);
   }
 
-  function resultDetail(item) {
+  function baseResultDetail(item) {
     if (item.status === "error") return item.message || "解析失敗";
     if (item.status === "needs_review" && item.message) return item.message;
     if (item.kind === "gift") return item.brand || "ギフト";
@@ -196,6 +133,11 @@
     if (item.site === "lawson_ldcp") return "ローソン";
     if (item.site === "starbucks") return "スターバックス";
     return "セブンイレブン";
+  }
+
+  function resultDetail(item) {
+    const detail = baseResultDetail(item);
+    return item.correctionWarning ? `${detail}／${item.correctionWarning}` : detail;
   }
 
   function render(results) {
@@ -256,7 +198,7 @@
       const display = displayValue(item);
       const merchant = merchantValue(item);
        const badge = item.manualCorrection ? '<small class="manual-badge">手動修正中</small>' : '';
-      const action = item.correctionKey && item.status !== "used" ? `<button class="correction-action" type="button" data-correction-index="${index}">${item.manualCorrection ? "修正・解除" : "修正"}</button>` : '';
+      const action = item.correctionKey && item.status !== "used" && item.size !== "used" ? `<button class="correction-action" type="button" data-correction-index="${index}">${item.manualCorrection ? "修正・解除" : "修正"}</button>` : '';
       const walletUrl = giftWalletSourceUrl(item.url) ? item.url : null;
       const openUrl = walletUrl || lawsonOpenUrl(item.url);
       const openAction = openUrl ? `<a class="result-open-link" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${walletUrl ? "gift Walletを開く" : "ローソンのクーポンを開く"}">${walletUrl ? "Walletを開く" : "クーポンを開く"} ↗</a>` : "";
@@ -274,6 +216,9 @@
   clearFilters.addEventListener("click",resetResultFilters);
 
   async function requestJson(path, options) {
+    if (/^\/api\/corrections(?:\/[a-f0-9]{64})?$/.test(path) && ["POST", "DELETE"].includes(options?.method)) {
+      options = { ...options, headers: { ...options.headers, "X-Coupon-Correction": "1" } };
+    }
     const response = await fetch(path, options);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
@@ -287,37 +232,50 @@
   }
 
   async function editCorrection(index) {
+    if (operations.owner) return;
     const item = lastResults[index];
-    if (!item?.correctionKey) return;
-    if (item.manualCorrection && confirm("手動修正を解除して、自動判定へ戻しますか？")) {
-      try {
+    if (!item?.correctionKey || item.status === "used" || item.size === "used") return;
+    const release = item.manualCorrection && confirm("手動修正を解除して、自動判定へ戻しますか？");
+    let product, capacity;
+    if (!release) {
+      product = prompt("正しい商品名を入力してください。", item.product || "");
+      if (product === null) return;
+      capacity = prompt("正しい容量を入力してください。例：350ml、500ml", item.capacity || "");
+      if (capacity === null) return;
+    }
+    operations.owner = "correction";
+    notifyOperationChange();
+    try {
+      if (release) {
         await requestJson(`/api/corrections/${item.correctionKey}`, { method:"DELETE" });
         item.manualCorrection = false;
         status.textContent = "手動修正を解除しました。もう一度解析すると自動判定へ戻ります。";
-        render(lastResults);
-      } catch (error) { alert(error.message); }
-      return;
-    }
-    const product = prompt("正しい商品名を入力してください。", item.product || "");
-    if (product === null) return;
-    const capacity = prompt("正しい容量を入力してください。例：350ml、500ml", item.capacity || "");
-    if (capacity === null) return;
-    try {
-      const saved = await requestJson("/api/corrections", {
-        method:"POST", headers:{ "content-type":"application/json" },
-        body:JSON.stringify({ correctionKey:item.correctionKey, product, capacity, size:sizeFromCapacity(capacity) })
-      });
-      Object.assign(item, saved, { status:"ok" });
-      status.textContent = "手動修正を保存しました。次回から優先します。";
+      } else {
+        const saved = await requestJson("/api/corrections", {
+          method:"POST", headers:{ "content-type":"application/json" },
+          body:JSON.stringify({ correctionKey:item.correctionKey, product, capacity, size:sizeFromCapacity(capacity) })
+        });
+        // A product correction cannot establish the coupon's redemption or fetch state.
+        if (typeof saved.product === "string") item.product = saved.product;
+        if (typeof saved.capacity === "string") item.capacity = saved.capacity;
+        if (["350", "500", "other", "none"].includes(saved.size)) item.size = saved.size;
+        item.manualCorrection = saved.manualCorrection === true;
+        status.textContent = "手動修正を保存しました。次回から優先します。";
+      }
       render(lastResults);
     } catch (error) { alert(error.message); }
+    finally {
+      operations.owner = null;
+      notifyOperationChange();
+    }
   }
 
   async function analyze(mode) {
     const items = supportedItems();
-    if (running || !items.length || items.length > MAX_ANALYZE_URLS) return;
+    if (operations.owner || running || !items.length || items.length > MAX_ANALYZE_URLS) return;
     running = true;
-    updateDetection();
+    operations.owner = "analysis";
+    notifyOperationChange();
     errorBox.classList.add("hidden");
     resultsSection.classList.add("hidden");
     showResults.disabled = true;
@@ -370,11 +328,13 @@
       errorBox.classList.remove("hidden");
     } finally {
       running = false;
-      updateDetection();
+      operations.owner = null;
+      notifyOperationChange();
     }
   }
 
   function reset() {
+    if (operations.owner || running) return;
     input.value = "";
     lastResults = [];
     resetResultFilters();
@@ -398,16 +358,18 @@
   analyzeStable.addEventListener("click", () => analyze("stable"));
   analyzeFast.addEventListener("click", () => analyze("fast"));
   pasteButton.addEventListener("click", async () => {
-    try { input.value = await navigator.clipboard.readText(); input.dispatchEvent(new Event("input")); }
+    if (operations.owner) return;
+    try {
+      const value = await navigator.clipboard.readText();
+      if (operations.owner) return;
+      input.value = value; input.dispatchEvent(new Event("input"));
+    }
     catch { errorBox.textContent = "貼り付け欄を長押しして貼り付けてください。"; errorBox.classList.remove("hidden"); }
   });
   clearButton.addEventListener("click", reset);
   showResults.addEventListener("click", () => resultsSection.scrollIntoView({ behavior:"smooth", block:"start" }));
   updateDetection();
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20261108-analysis-2000-v1", { scope:"/", updateViaCache:"none" }).then(registration => registration.update()).catch(() => {}));
-  }
 })();
 
 

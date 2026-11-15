@@ -11,7 +11,7 @@ function setup(respond) {
     });
     return nodes.get(key);
   };
-  const script=fs.readFileSync(new URL("../public/capture.js",import.meta.url),"utf8")
+  const script=(fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL("../public/capture.js",import.meta.url),"utf8"))
     .replace(/\}\)\(\);\s*$/, "globalThis.retryForTest=requestWithRetry;})();");
   const context=vm.createContext({
     document:{querySelector:get},navigator:{},URL,TypeError,

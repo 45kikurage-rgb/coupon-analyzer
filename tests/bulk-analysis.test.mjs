@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const script = fs.readFileSync(new URL('../public/analyzer.js', import.meta.url), 'utf8');
+const script = (fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL('../public/analyzer.js', import.meta.url), 'utf8'));
 const url = n => `https://coupon.sej.co.jp/order/cpnsp_03.do?hansoku_id=Fixture${String(n).padStart(5, '0')}`;
 function setup(respond) {
   const nodes = new Map();
