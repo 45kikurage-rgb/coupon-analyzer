@@ -12,7 +12,7 @@ test("detects SB Gift URLs and refuses 134-item captures without silently discar
     return nodes.get(key);
   };
   let requests=0;
-  vm.runInNewContext(fs.readFileSync(new URL("../public/capture.js",import.meta.url),"utf8"),{
+  vm.runInNewContext((fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL("../public/capture.js",import.meta.url),"utf8")),{
     document:{querySelector:get},navigator:{},URL,fetch(){requests++;throw new Error("unexpected request");},
   });
   const input=get("#input");

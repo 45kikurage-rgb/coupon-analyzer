@@ -9,7 +9,7 @@ test('paste detection enables Lawson coupon and login URLs without changing inpu
     if (!elements.has(selector)) elements.set(selector, {value:'',disabled:false,addEventListener(type,fn) {this[type]=fn;}});
     return elements.get(selector);
   } };
-  const script = fs.readFileSync(new URL('../public/analyzer.js',import.meta.url),'utf8');
+  const script = (fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL('../public/analyzer.js',import.meta.url),'utf8'));
   vm.runInNewContext(script,{document,navigator:{},URL});
   const coupon='https://apli.lawson.jp/ldcp/coupon/?campaignId=testfixture&encDataCode=VEVTVEZJWFRVUkU%3D';
   const input=elements.get('#input');

@@ -24,7 +24,7 @@ function startAnalyzer(results) {
     calls.push({ path, body: JSON.parse(options.body) });
     return { ok: true, json: async () => ({ results, processingMs: 2 }) };
   };
-  const script = fs.readFileSync(new URL('../public/analyzer.js', import.meta.url), 'utf8');
+  const script = (fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL('../public/analyzer.js', import.meta.url), 'utf8'));
   vm.runInNewContext(script, { document, navigator: {}, URL, fetch });
   return { input, nodes, calls, run() { get('#analyzeStart').click(); } };
 }

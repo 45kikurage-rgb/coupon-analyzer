@@ -24,7 +24,10 @@
   const clearButton = document.querySelector("#clear");
   const zipStatus = document.querySelector("#zipStatus");
 
-  let state = { urls: [], results: [], cards: [], mode: null };
+  const operations = document.couponOperations ||= { owner: null, refresh: new Set() };
+  const notifyOperationChange = () => operations.refresh.forEach(refresh => refresh());
+  const { isSupportedCaptureUrl } = globalThis.CouponUrlRules;
+  let state = { urls: [], results: [], cards: [], mode: null, retryCount: 0 };
   let running = false;
 
   function extract(text) {
@@ -34,17 +37,7 @@
       const value = raw.replace(/[.,、。\])}]+$/, "");
       try {
         const url = new URL(value);
-        const seven = url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do" && Boolean(url.searchParams.get("hansoku_id"));
-        const family = url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb" &&
-          Boolean(url.searchParams.get("eKey")) && Boolean(url.searchParams.get("cpNo")) && Boolean(url.searchParams.get("gyNo"));
-        const petit = url.hostname === "coupon.petit.gift" && url.pathname === "/coupons/detail" &&
-          ["app_id", "coupon_id", "user_id", "enc"].every(key => url.searchParams.has(key));
-        const sbg = url.hostname === "sbg.jp" && /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search;
-        const asahi = url.protocol === "https:" && !url.username && !url.password && (!url.port || url.port === "443") && !url.hash &&
-          url.hostname === "www.asahibeer-cp.jp" && /^\/brand\/bitter-ist\/cp\/\d{6}-\d{6}-[a-z0-9]+\/coupon\/lw\/index\.html$/.test(url.pathname) &&
-          url.searchParams.getAll("code").length === 1 && /^0\d{17}$/.test(url.searchParams.get("code")) &&
-          [...url.searchParams.keys()].every(key => key === "code");
-        if (seven || family || petit || sbg || asahi) supported.push(url.toString());
+        if (isSupportedCaptureUrl(value)) supported.push(url.toString());
       } catch {
         // 入力途中は無視し、Workerでも再検証します。
       }
@@ -85,7 +78,7 @@
 
   function resetResults() {
     state.results.forEach(releaseResult);
-    state = { urls: [], results: [], cards: [], mode: null };
+    state = { urls: [], results: [], cards: [], mode: null, retryCount: 0 };
     grid.innerHTML = "";
   }
 
@@ -219,7 +212,7 @@
     const successes = state.results.filter((item) => item?.ok);
     const failures = state.results.filter((item) => item && !item.ok);
     const duplicateCount = successes.filter((item) => item.duplicate).length;
-    const retryCount = state.results.reduce((sum, item) => sum + (item?.retries || 0), 0);
+    const retryCount = state.retryCount;
     summary.classList.remove("hidden");
     const modeLabel = mode === "fast" ? "高速処理" : "安定処理";
     summary.innerHTML = `<strong>${modeLabel}</strong>　成功 ${successes.length}件　失敗 ${failures.length}件　重複 ${duplicateCount}件　自動再試行 ${retryCount}回　約${seconds}秒`;
@@ -281,7 +274,7 @@
   }
 
   async function process(mode, onlyFailed = false) {
-    if (running) return;
+    if (operations.owner || running) return;
     const urls = onlyFailed ? state.urls : extract(input.value);
     if (!urls.length) {
       statusEl.textContent = "対応するセブン・ファミリーマート・プチギフト・SBギフトのURLが見つかりません。";
@@ -296,7 +289,9 @@
       return;
     }
     running = true;
+    operations.owner = "capture";
     setButtonsDisabled(true);
+    notifyOperationChange();
     zipAll.disabled = true;
     zipUnique.disabled = true;
     zipStatus.textContent = "";
@@ -319,12 +314,15 @@
       await Promise.all(state.cards.map((_, index) => renderItem(index)));
     }
     state.mode = mode;
+    state.retryCount = 0;
     const taskIndexes = onlyFailed
       ? state.results.flatMap((item, index) => item && !item.ok ? [index] : [])
       : state.urls.map((_, index) => index);
     if (!taskIndexes.length) {
       running = false;
+      operations.owner = null;
       setButtonsDisabled(false);
+      notifyOperationChange();
       return;
     }
 
@@ -337,6 +335,7 @@
     const requestCache = new Map();
     const onTransient = () => {
       transientErrors += 1;
+      state.retryCount += 1;
       if (mode === "fast" && transientErrors >= 2) activeLimit = FAST_FALLBACK_CONCURRENCY;
     };
 
@@ -390,7 +389,9 @@
       updateSummary(mode, seconds);
     } finally {
       running = false;
+      operations.owner = null;
       setButtonsDisabled(false);
+      notifyOperationChange();
     }
   }
 
@@ -473,6 +474,7 @@
   }
 
   function clearAll() {
+    if (operations.owner || running) return;
     resetResults();
     resultSection.classList.add("hidden");
     summary.classList.add("hidden");
@@ -486,6 +488,12 @@
     updateCounter();
   }
 
+  operations.refresh.add(() => {
+    const busy = Boolean(operations.owner);
+    clearButton.disabled = busy;
+    retryFailed.disabled = busy;
+  });
+
   input.addEventListener("input", updateCounter);
   stableStart.addEventListener("click", () => process("stable"));
   fastStart.addEventListener("click", () => process("fast"));
@@ -497,13 +505,6 @@
   zipAll.disabled = true;
   zipUnique.disabled = true;
   updateCounter();
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js?v=20260917-speed-labels", { updateViaCache:"none" })
-        .then((registration) => registration.update())
-        .catch(() => {});
-    });
-  }
 })();
 
 

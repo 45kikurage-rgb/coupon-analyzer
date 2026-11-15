@@ -15,7 +15,7 @@ test("Petit Gift enables both capture buttons as well as analysis",()=>{
     return nodes.get(key);
   };
   const context=vm.createContext({document:{querySelector:get},navigator:{},URL});
-  for(const path of ["capture.js","analyzer.js"])
+  for(const path of ["url-rules.js","capture.js","analyzer.js"])
     vm.runInContext(fs.readFileSync(new URL("../public/"+path,import.meta.url),"utf8"),context);
   assert.equal(get("#fastStart").disabled,true);
   const input=get("#input");
