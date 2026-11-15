@@ -45,6 +45,29 @@
       [...params.keys()].every(key => Object.hasOwn(required, key) || key === "t");
   }
 
+  function giftWalletSourceUrl(value) {
+    try {
+      const wallet = new URL(value);
+      if (wallet.href.length > 2048 || wallet.protocol !== "https:" ||
+          wallet.hostname !== "wallet.vaton.jp" || wallet.username || wallet.password ||
+          (wallet.port && wallet.port !== "443") || wallet.hash ||
+          !/^\/lp\/campaign_tiktok\/?$/.test(wallet.pathname)) return null;
+      const params = wallet.searchParams;
+      if (params.getAll("gift_origin").length !== 1 || params.get("gift_origin") !== "g4b" ||
+          params.getAll("gift_url").length !== 1 || params.getAll("referer").length > 1 ||
+          (params.has("referer") && params.get("referer") !== "giftee_box") ||
+          [...params.keys()].some(key => !["gift_origin", "gift_url", "referer"].includes(key))) return null;
+      const source = new URL(params.get("gift_url"));
+      if (source.protocol !== "https:" || source.hostname !== "g4b.giftee.biz" ||
+          source.username || source.password || (source.port && source.port !== "443") ||
+          source.search || source.hash ||
+          !/^\/giftee_boxes\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?:\/(?:home|gifts))?\/?$/i.test(source.pathname)) return null;
+      return source.toString();
+    } catch {
+      return null;
+    }
+  }
+
   function isSupportedAnalysisUrl(value) {
     try {
       const url = new URL(value);
@@ -56,6 +79,7 @@
       }
       if (url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do") return true;
       if (url.hostname === "ncpfa.famima.com" && url.pathname === "/prd/ebcweb") return true;
+      if (giftWalletSourceUrl(value)) return true;
       if (url.hostname === "g4b.giftee.biz") return /^\/giftee_boxes\/[0-9a-f-]{36}(?:\/(?:home|gifts))?\/?$/i.test(url.pathname) && !url.search;
       if (url.hostname === "misterdonut.e-gift.co") return /^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname);
       if (url.hostname === "gift.starbucks.co.jp") return /^\/e\/[A-Za-z0-9_-]{8,200}\/?$/.test(url.pathname);
@@ -162,6 +186,7 @@
     if (item.status === "error") return item.message || "解析失敗";
     if (item.status === "needs_review" && item.message) return item.message;
     if (item.kind === "gift") return item.brand || "ギフト";
+    if (giftWalletSourceUrl(item.url)) return "gift Wallet（元のgiftee Boxを解析）";
     if (item.site === "giftee_box") return "Giftee Box";
     if (item.site === "familymart") return "ファミリーマート";
     if (item.site === "misterdonut") return "ミスタードーナツ";
@@ -232,8 +257,9 @@
       const merchant = merchantValue(item);
        const badge = item.manualCorrection ? '<small class="manual-badge">手動修正中</small>' : '';
       const action = item.correctionKey && item.status !== "used" ? `<button class="correction-action" type="button" data-correction-index="${index}">${item.manualCorrection ? "修正・解除" : "修正"}</button>` : '';
-      const openUrl = lawsonOpenUrl(item.url);
-      const openAction = openUrl ? `<a class="result-open-link" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer" aria-label="ローソンのクーポンを開く">クーポンを開く ↗</a>` : "";
+      const walletUrl = giftWalletSourceUrl(item.url) ? item.url : null;
+      const openUrl = walletUrl || lawsonOpenUrl(item.url);
+      const openAction = openUrl ? `<a class="result-open-link" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${walletUrl ? "gift Walletを開く" : "ローソンのクーポンを開く"}">${walletUrl ? "Walletを開く" : "クーポンを開く"} ↗</a>` : "";
       return `<div class="result-row ${item.status === "error" ? "status-error" : item.status === "used" ? "status-used" : ""}"><span class="number">${escapeHtml(item.label)}</span><span><strong>${escapeHtml(display.name)}</strong><small class="result-merchant">利用先：${escapeHtml(merchant)}</small>${badge}</span><span class="detail"><strong>${escapeHtml(display.capacity)}</strong><small>${escapeHtml(resultDetail(item))}</small>${action}${openAction}</span><span>${escapeHtml(display.expiry)}</span></div>`;
     }).join("")}${visible.length ? "" : '<div class="result-filter-empty">条件に一致するURLはありません。</div>'}<div class="processing-time">処理時間 ${(lastProcessingMs / 1000).toFixed(1)}秒</div>`;
     resultList.querySelectorAll("[data-correction-index]").forEach(button => button.addEventListener("click", () => editCorrection(Number(button.dataset.correctionIndex))));
