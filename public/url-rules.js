@@ -67,6 +67,10 @@
     if (giftWalletSourceUrl(value)) return "giftee_box";
     if (lawsonOpenUrl(value)) return "lawson_ldcp";
     if (isAsahiCouponUrl(url)) return "asahi_coupon";
+    if (url.hostname === "ichibanya.e-gift.co") {
+      return url.href.length <= 2048 && !url.search && !url.hash &&
+        /^\/c\/[A-Za-z0-9_-]{6,200}\/[1-9]\d{0,7}\/?$/.test(url.pathname) ? "ichibanya" : null;
+    }
     if (url.hostname === "coupon.petit.gift") return isPetitGiftDetail(url) ? "petit_gift" : null;
     if (url.hostname === "sbg.jp") return /^\/cp\/exchange\/\d{1,12}\/[a-f0-9]{32}\/?$/i.test(url.pathname) && !url.search ? "sbg" : null;
     if (url.hostname === "coupon.sej.co.jp" && url.pathname === "/order/cpnsp_03.do") {
@@ -118,3 +122,4 @@
     lawsonOpenUrl, isSupportedCaptureUrl
   });
 })();
+
