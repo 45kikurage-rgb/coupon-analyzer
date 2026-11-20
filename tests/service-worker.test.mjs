@@ -84,8 +84,8 @@ test("SW reuses only its current shell cache and does not cache no-store respons
 
 test("SW caches an allowed successful shell response and reuses it", async () => {
   const worker = loadWorker();
-  await worker.request("/styles.css?v=20261106-redeem-place-v1");
-  assert.equal(await (await worker.request("/styles.css?v=20261106-redeem-place-v1")).text(), "network");
+  await worker.request("/styles.css?v=20261120-filter-copy-v1");
+  assert.equal(await (await worker.request("/styles.css?v=20261120-filter-copy-v1")).text(), "network");
   assert.equal(worker.calls.filter((call) => call.startsWith("fetch:")).length, 1);
   assert.equal(worker.request("/styles.css?unlisted=1"), undefined);
 });

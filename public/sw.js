@@ -1,12 +1,12 @@
-const CACHE_VERSION = "coupon-analyzer-20261117-ichibanya-v1";
+const CACHE_VERSION = "coupon-analyzer-20261120-filter-copy-v1";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20261106-redeem-place-v1",
+  "/styles.css?v=20261120-filter-copy-v1",
   "/url-rules.js?v=20261117-ichibanya-v1",
-  "/analyzer.js?v=20261117-ichibanya-v1",
+  "/analyzer.js?v=20261120-filter-copy-v1",
   "/capture.js?v=20261117-ichibanya-v1",
-  "/app.js?v=20261117-ichibanya-v1",
+  "/app.js?v=20261120-filter-copy-v1",
   "/manifest.webmanifest?v=20260922-v3",
   "/header-character.svg?v=20260922-v3",
   "/icon.svg?v=20260922-v3",

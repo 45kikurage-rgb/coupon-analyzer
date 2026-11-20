@@ -7,6 +7,7 @@ test('result filters combine without renumbering, changing totals, or correcting
   const elements=new Map();
   const buttonEvents=new Map();
   const corrections=[];
+  const copied=[];
   const results=[
     {label:'11',url:'https://coupon.sej.co.jp/order/cpnsp_03.do?hansoku_id=fixture1',product:'ビールA',capacity:'350ml',size:'350',status:'ok',expiresOn:'2026-10-31'},
     {label:'22',url:'https://coupon.sej.co.jp/order/cpnsp_03.do?hansoku_id=fixture2',product:'商品名不明',capacity:'350ml',size:'350',status:'needs_review'},
@@ -34,13 +35,16 @@ test('result filters combine without renumbering, changing totals, or correcting
     return {ok:true,json:async()=>({product:body.product,capacity:body.capacity,size:body.size,manualCorrection:true,status:'ok'})};
   };
   vm.runInNewContext((fs.readFileSync(new URL("../public/url-rules.js",import.meta.url),"utf8")+"\n"+fs.readFileSync(new URL('../public/analyzer.js',import.meta.url),'utf8')),{
-    document,navigator:{},URL,fetch,prompt:()=>prompts.shift(),confirm:()=>false,alert:()=>{}
+    document,navigator:{clipboard:{writeText:async text=>copied.push(text)}},URL,fetch,prompt:()=>prompts.shift(),confirm:()=>false,alert:()=>{}
   });
   const get=id=>elements.get('#'+id);
   get('input').value=results.map(row=>`${row.label}\n${row.url}`).join('\n');get('input').input();
   await get('analyzeStart').click();
   assert.equal(get('resultFilterCount').textContent,'表示 5件 / 全 5件');
   const fullBreakdown=get('breakdownTable').innerHTML;
+  await get('copyVisibleResults').click();
+  assert.equal(copied.at(-1),results.map(row=>row.url).join('\n'));
+  assert.equal(get('resultCopyStatus').textContent,'5件のURLをコピーしました。');
   get('resultStatusFilter').value='used';get('resultStatusFilter').change();
   assert.equal(get('resultFilterCount').textContent,'表示 1件 / 全 5件');
   assert.match(get('resultList').innerHTML,/>33</);assert.doesNotMatch(get('resultList').innerHTML,/>11</);
@@ -50,6 +54,9 @@ test('result filters combine without renumbering, changing totals, or correcting
   get('resultCapacityFilter').value='判定不能';get('resultCapacityFilter').change();
   assert.equal(get('resultFilterCount').textContent,'表示 1件 / 全 5件');
   assert.match(get('resultList').innerHTML,/>44</);
+  await get('copyVisibleResults').click();
+  assert.equal(copied.at(-1),results[3].url);
+  assert.equal(get('resultCopyStatus').textContent,'1件のURLをコピーしました。');
   assert.match(get('resultList').innerHTML,/data-correction-index="3"/);
   assert.equal(get('breakdownTable').innerHTML,fullBreakdown);
   assert.equal(get('resultTotal').textContent,5);
@@ -65,6 +72,11 @@ test('result filters combine without renumbering, changing totals, or correcting
   assert.match(get('resultList').innerHTML,/修正済みの商品/);
   get('resultSearchFilter').value='一致しない文字列';get('resultSearchFilter').input();
   assert.match(get('resultList').innerHTML,/条件に一致するURLはありません/);
+  assert.equal(get('copyVisibleResults').disabled,true);
+  assert.equal(get('resultCopyStatus').textContent,'');
+  const copyCount=copied.length;
+  await get('copyVisibleResults').click();
+  assert.equal(copied.length,copyCount);
   get('clearResultFilters').click();
   assert.equal(get('resultFilterCount').textContent,'表示 5件 / 全 5件');
   get('analysisClear').click();
