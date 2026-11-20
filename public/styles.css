@@ -58,6 +58,10 @@
 .result-filters select,.result-filters input{width:100%;min-width:0;min-height:44px;padding:8px;border:2px solid #73737d;border-radius:0;background:#030304;color:#fff;font:inherit;font-size:16px}
 .result-filters select:focus,.result-filters input:focus{outline:2px solid #ffd43b;outline-offset:2px}
 .result-filter-count{margin:10px 0 0;color:#f7e8b8;font-size:.8rem}
+.copy-results-button{display:block;width:100%;margin-top:10px;border-color:#fff;background:#fff;color:#000}
+.copy-results-button:focus-visible{outline:2px solid #ffd43b;outline-offset:2px}
+.result-copy-status{margin:6px 0 0;color:#f7e8b8;font-size:.8rem}
+.result-copy-status:empty{display:none}
 .result-filter-empty{padding:20px 12px;text-align:center;color:#c9c9c9;font-size:.85rem}
 
 /* Lawson voucher link: readable and tappable beside analysis details. */

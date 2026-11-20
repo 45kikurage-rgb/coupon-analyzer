@@ -17,14 +17,15 @@ function setup(respond) {
     return nodes.get(key);
   };
   const calls = [];
-  vm.runInNewContext(script, {document:{querySelector:get},navigator:{},URL,
+  const copied = [];
+  vm.runInNewContext(script, {document:{querySelector:get},navigator:{clipboard:{writeText:async text=>copied.push(text)}},URL,
     fetch:async(path, options) => {
       const body = JSON.parse(options.body);
       calls.push(body);
       return respond(body, calls.length, get);
     }
   });
-  return {get,calls,paste(text){get('#input').value=text;get('#input').input();}};
+  return {get,calls,copied,paste(text){get('#input').value=text;get('#input').input();}};
 }
 const success = body => ({ok:true,json:async()=>({results:body.items.map(item=>({...item,product:'緑茶',size:'350',capacity:'350ml',status:'ok'})),processingMs:1})});
 
@@ -48,9 +49,13 @@ for (const mode of ['stable','fast']) test(`${mode}: 2000 unique numbered URLs f
   assert.equal(app.get('#analysisPercent').textContent,'100%');
   assert.equal(app.get('#analysisStatus').textContent,'解析完了 2000/2000件');
   assert.match(app.get('#resultList').innerHTML,/>2000<\/span>/);
+  await app.get('#copyVisibleResults').click();
+  assert.equal(app.copied.at(-1),sent.map(item=>item.url).join('\n'));
   app.get('#resultSearchFilter').value='Fixture02000';
   app.get('#resultSearchFilter').input();
   assert.equal(app.get('#resultFilterCount').textContent,'表示 1件 / 全 2000件');
+  await app.get('#copyVisibleResults').click();
+  assert.equal(app.copied.at(-1),url(2000));
   assert.equal(app.get('#input').value,input+'\n'+url(1));
   assert.equal(app.get('#input').disabled,false);
 });

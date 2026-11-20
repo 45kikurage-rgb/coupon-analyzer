@@ -9,7 +9,7 @@
   <meta name="application-name" content="クーポン判定">
   <link rel="manifest" href="/manifest.webmanifest?v=20260922-v3">
   <link rel="icon" type="image/svg+xml" href="/icon.svg?v=20260922-v3">
-  <link rel="stylesheet" href="/styles.css?v=20261106-redeem-place-v1">
+  <link rel="stylesheet" href="/styles.css?v=20261120-filter-copy-v1">
 </head>
 <body>
 <main class="app-shell">
@@ -91,6 +91,8 @@
         <label>検索<input id="resultSearchFilter" type="search" placeholder="番号・商品名・利用先・URL" autocomplete="off"></label>
       </div>
       <p class="result-filter-count" id="resultFilterCount" role="status" aria-live="polite"></p>
+      <button class="copy-results-button" id="copyVisibleResults" type="button" disabled>表示中のURLを一括コピー（0件）</button>
+      <p class="result-copy-status" id="resultCopyStatus" role="status" aria-live="polite"></p>
       <div class="result-list" id="resultList"></div>
     </div>
   </section>
@@ -98,8 +100,8 @@
 </main>
 <script src="/url-rules.js?v=20261117-ichibanya-v1"></script>
 <script src="/capture.js?v=20261117-ichibanya-v1"></script>
-<script src="/analyzer.js?v=20261117-ichibanya-v1"></script>
-<script src="/app.js?v=20261117-ichibanya-v1"></script>
+<script src="/analyzer.js?v=20261120-filter-copy-v1"></script>
+<script src="/app.js?v=20261120-filter-copy-v1"></script>
 </body>
 </html>
 

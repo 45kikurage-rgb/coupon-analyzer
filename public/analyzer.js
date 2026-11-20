@@ -15,6 +15,8 @@
   const searchFilter = document.querySelector("#resultSearchFilter");
   const clearFilters = document.querySelector("#clearResultFilters");
   const filterCount = document.querySelector("#resultFilterCount");
+  const copyVisibleResults = document.querySelector("#copyVisibleResults");
+  const copyStatus = document.querySelector("#resultCopyStatus");
   const progress = document.querySelector("#analysisProgress");
   const percent = document.querySelector("#analysisPercent");
   const status = document.querySelector("#analysisStatus");
@@ -27,6 +29,8 @@
   let running = false;
   let lastResults = [];
   let lastProcessingMs = 0;
+  let copying = false;
+  let resultListRevision = 0;
   const MAX_ANALYZE_URLS = 2000;
   const ANALYZE_BATCH_SIZE = 100;
 
@@ -181,9 +185,9 @@
     select.value = options.includes(previous) ? previous : "";
   }
 
-  function renderResultList() {
+  function filteredResults() {
     const query = searchFilter.value.normalize("NFKC").trim().toLocaleLowerCase("ja");
-    const visible = lastResults.map((item,index) => ({item,index})).filter(({item}) => {
+    return lastResults.map((item,index) => ({item,index})).filter(({item}) => {
       const display = displayValue(item);
       if (statusFilter.value && resultStatus(item) !== statusFilter.value) return false;
       if (productFilter.value && String(display.name || "") !== productFilter.value) return false;
@@ -192,6 +196,19 @@
       const text = [item.label,item.url,display.name,merchantValue(item),display.capacity,display.expiry,resultDetail(item)].join(" ").normalize("NFKC").toLocaleLowerCase("ja");
       return !query || text.includes(query);
     });
+  }
+
+  function updateCopyButton() {
+    const count = filteredResults().length;
+    copyVisibleResults.disabled = copying || count === 0;
+    copyVisibleResults.textContent = `表示中のURLを一括コピー（${count}件）`;
+  }
+
+  function renderResultList() {
+    const visible = filteredResults();
+    resultListRevision += 1;
+    copyStatus.textContent = "";
+    updateCopyButton();
     filterCount.textContent = `表示 ${visible.length}件 / 全 ${lastResults.length}件`;
     clearFilters.disabled = ![statusFilter.value,productFilter.value,capacityFilter.value,merchantFilter.value,searchFilter.value].some(Boolean);
     resultList.innerHTML = `<div class="result-list-head"><span>番号</span><span>商品名・BOX名</span><span>容量・操作</span><span>有効期限</span></div>${visible.map(({item,index}) => {
@@ -214,6 +231,48 @@
   [statusFilter,productFilter,capacityFilter,merchantFilter].forEach(element => element.addEventListener("change",renderResultList));
   searchFilter.addEventListener("input",renderResultList);
   clearFilters.addEventListener("click",resetResultFilters);
+
+  function legacyCopy(text) {
+    const previousFocus = document.activeElement;
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.readOnly = true;
+    textarea.style.cssText = "position:fixed;top:0;left:0;opacity:0;font-size:16px";
+    document.body.appendChild(textarea);
+    try {
+      textarea.focus({ preventScroll:true });
+      textarea.select();
+      if (!document.execCommand("copy")) throw new Error("copy failed");
+    } finally {
+      textarea.remove();
+      previousFocus?.focus({ preventScroll:true });
+    }
+  }
+
+  copyVisibleResults.addEventListener("click", async () => {
+    const visible = filteredResults();
+    if (copying || !visible.length) return;
+    // Preserve the original coupon URLs, parameters and displayed order.
+    const text = visible.map(({item}) => item.url).join("\n");
+    const revision = resultListRevision;
+    copying = true;
+    copyStatus.textContent = "";
+    updateCopyButton();
+    try {
+      if (navigator.clipboard?.writeText) {
+        try { await navigator.clipboard.writeText(text); }
+        catch { legacyCopy(text); }
+      } else {
+        legacyCopy(text);
+      }
+      if (revision === resultListRevision) copyStatus.textContent = `${visible.length}件のURLをコピーしました。`;
+    } catch {
+      if (revision === resultListRevision) copyStatus.textContent = "コピーできませんでした。もう一度ボタンを押してください。";
+    } finally {
+      copying = false;
+      updateCopyButton();
+    }
+  });
 
   async function requestJson(path, options) {
     if (/^\/api\/corrections(?:\/[a-f0-9]{64})?$/.test(path) && ["POST", "DELETE"].includes(options?.method)) {
